@@ -152,7 +152,12 @@ The catalog is being rebuilt for the training business (see [docs/ROADMAP.md](do
 API Management / networking blueprints were removed, and new showcase scenarios are added under `blueprints/<id>/`
 as Bicep (preferably [Azure Verified Modules](https://aka.ms/avm)). `server/labs/blueprints.ts` declares each
 blueprint's parameters, rules, presets, stages/gates, quotas, progress steps and price meters; a blueprint can also
-be created from an existing resource group with **Save as blueprint** (below).
+be created from an existing resource group with **Save as blueprint** (below). Each showcase blueprint carries a
+`scenario` (business story, learning objectives, exams covered) shown in the launch dialog.
+
+| Blueprint | What you get | ≈ $/hr | Deploy |
+|---|---|---|---|
+| `cr-farmacia-recibos` | **Farmacia Pura Vida**: a pharmacy's digital receipts. Static Web App (Free) front end, Cosmos DB serverless sales database, Storage account for receipt files (LRS or GRS) | ~0 (usage-based) | 3–8 min |
 
 **Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the
 public [Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices).

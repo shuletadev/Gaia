@@ -186,6 +186,7 @@ export async function validateLab(
       ttlHours: req.ttlHours,
       hourly: est.hourly,
       resourceTypes: types,
+      regionFree: p.blueprint.regionFree,
       quotas,
       vmSizes,
       rules,

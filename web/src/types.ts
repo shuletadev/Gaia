@@ -39,6 +39,7 @@ export interface BlueprintInfo {
   title: string;
   category: string;
   tagline: string;
+  scenario?: { story: string; objectives: string[]; exams: string[] };
   deployMinutes: [number, number];
   icons: string[];
   fields: import("../../server/labs/blueprints.ts").ParamField[];

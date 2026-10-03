@@ -39,6 +39,13 @@ subscriptions.
 - **Pilot course:** AZ-900. **Language:** English admin UI, Spanish student guides.
 - **No Azure Pass codes** for MCTs, so student usage is paid by the business.
 
+## Showcase catalog progress
+
+- [x] `cr-farmacia-recibos` (pharmacy digital receipts): infrastructure only. The Static Web App shows Azure's placeholder
+  page; deploying a sample app (needs a content hook using the Static Web Apps deployment token) is the next step.
+- [ ] Pulpería inventory
+- [ ] Small-business website
+
 ## What the current code gives us
 
 | Reusable as is | Needs to change |

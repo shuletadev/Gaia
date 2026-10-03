@@ -102,6 +102,7 @@ export async function suggestAlternatives(
         ttlHours: req.ttlHours,
         hourly: est.hourly,
         resourceTypes: types,
+        regionFree: b.regionFree,
         quotas,
         vmSizes,
         rules,

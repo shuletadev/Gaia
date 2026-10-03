@@ -222,6 +222,15 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
         </div>
       </div>
 
+      {b.scenario && (
+        <details className="mt-4 rounded-2xl border border-stone-300 px-4 py-3 text-sm dark:border-stone-700">
+          <summary className="cursor-pointer select-none font-medium">Scenario and what students learn</summary>
+          <p className="mt-2 text-stone-600 dark:text-stone-400">{b.scenario.story}</p>
+          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-stone-600 dark:text-stone-400">{b.scenario.objectives.map((o) => <li key={o}>{o}</li>)}</ul>
+          <div className="mt-2 flex flex-wrap gap-1.5">{b.scenario.exams.map((e) => <Chip key={e} tone="plain">{e}</Chip>)}</div>
+        </details>
+      )}
+
       {b.presets.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-1.5">
           {b.presets.map((p) => {

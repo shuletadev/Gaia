@@ -314,6 +314,7 @@ app.get("/api/blueprints", async () => ({
       title: b.title,
       category: categoryOf(b),
       tagline: b.tagline,
+      scenario: b.scenario,
       icons: b.icons,
       fields: b.fields,
       notes: b.notes,

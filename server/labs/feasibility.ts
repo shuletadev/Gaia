@@ -50,6 +50,8 @@ export interface FeasibilityInput {
   ttlHours: number;
   hourly: number;
   resourceTypes: string[];
+  /** Types the template places itself, exempt from the "available in region" check. */
+  regionFree?: string[];
   quotas?: Record<string, number>;
   rules: string[];
   deployMinutes: [number, number];
@@ -105,7 +107,7 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
 
   // Every resource type offered in the region (global types pass).
   const missing: string[] = [];
-  for (const t of i.resourceTypes) {
+  for (const t of i.resourceTypes.filter((x) => !i.regionFree?.includes(x))) {
     const [ns, ...rest] = t.split("/");
     const p = f.providers[ns!];
     if (!p) continue;
