@@ -19,11 +19,7 @@
   },
   "ttlHours": {
     "default": 8,
-    "byBlueprint": {
-      "apim-internal-appgw": 12,
-      "apim-v2-quickstart": 8,
-      "hub-spoke-firewall": 8
-    }
+    "byBlueprint": {}
   },
   "owner": "you@example.com",
   "server": {

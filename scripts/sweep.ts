@@ -1,6 +1,6 @@
 /**
  * Headless expiry sweep: destroys expired labctl labs and waits for the deletes to finish.
- * Run by the Windows logon/unlock task, or by hand:  npm run sweep [-- --dry-run]
+ * Run by hand:  npm run sweep [-- --dry-run]
  */
 import { listResourceGroups } from "../server/azure/resourceGraph.ts";
 import { canAutoDelete } from "../server/guard.ts";
@@ -23,7 +23,7 @@ try {
     if (result.started.length) {
       await jobs.drain();
       for (const j of jobs.recent(50).filter((x) => x.kind === "lab.expire" && result.started.includes(x.target_name) && x.pid === process.pid)) {
-        logLine(LOG, `[${trigger}] ${j.target_name}: ${j.status}${j.error ? ` — ${j.error}` : ""}`);
+        logLine(LOG, `[${trigger}] ${j.target_name}: ${j.status}${j.error ? ` â€” ${j.error}` : ""}`);
       }
     }
   }
@@ -31,3 +31,4 @@ try {
   logLine(LOG, `[${trigger}] FAILED: ${(e as Error).message}`);
   process.exitCode = 1;
 }
+

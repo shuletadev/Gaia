@@ -22,7 +22,6 @@ import type { HookKind } from "./blueprints.ts";
 
 const STACK_API = "2024-03-01";
 const RG_API = "2021-04-01";
-const APIM_API = "2024-05-01";
 
 export interface LabRequest {
   blueprint: string;
@@ -31,8 +30,6 @@ export interface LabRequest {
   ttlHours: number;
   purpose?: string;
   labName?: string;
-  /** Support case the lab reproduces; tagged as caseId. */
-  caseId?: string;
   /** Allow-listed subscription to deploy into (defaults to the first configured one). */
   subscriptionId?: string;
 }
@@ -59,16 +56,13 @@ export class LabRequestError extends Error {}
 export function prepareLab(config: LabctlConfig, req: LabRequest, now = new Date(), opts: { skipRules?: boolean } = {}): PreparedLab {
   const blueprint = getBlueprint(req.blueprint);
   if (!config.labs.regions.includes(req.region)) throw new LabRequestError(`Region ${req.region} is not enabled in Settings`);
-  if (!(Number.isFinite(req.ttlHours) && req.ttlHours >= 1 && req.ttlHours <= 72)) throw new LabRequestError("Lifetime must be 1–72 hours");
+  if (!(Number.isFinite(req.ttlHours) && req.ttlHours >= 1 && req.ttlHours <= 72)) throw new LabRequestError("Lifetime must be 1â€“72 hours");
   const parsed = blueprint.schema.safeParse(req.params ?? {});
   if (!parsed.success) throw new LabRequestError(`Invalid parameters: ${parsed.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
   const ruleErrors = blueprint.rules?.(parsed.data) ?? [];
   if (ruleErrors.length && !opts.skipRules) throw new LabRequestError(ruleErrors.join("; "));
   const labName = req.labName ?? newLabName(blueprint.code);
-  if (!LAB_NAME.test(labName) || !labName.startsWith(`lab-${blueprint.code}-`)) throw new LabRequestError(`Invalid lab name ${labName}`);
-  const caseId = req.caseId?.trim();
-  if (caseId && !/^[A-Za-z0-9-]{3,40}$/.test(caseId)) throw new LabRequestError("Case ID may only contain letters, digits and hyphens");
-  const purpose = (req.purpose ?? "").replace(/[<>%&\\?/]/g, "").trim().slice(0, 80) || (caseId ? `Case ${caseId}` : blueprint.title);
+  if (!LAB_NAME.test(labName) || !labName.startsWith(`lab-${blueprint.code}-`)) throw new LabRequestError(`Invalid lab name ${labName}`);  const purpose = (req.purpose ?? "").replace(/[<>%&\\?/]/g, "").trim().slice(0, 80) || blueprint.title;
   const subscriptionId = req.subscriptionId ?? config.subscriptions[0]?.id;
   if (!subscriptionId) throw new LabRequestError("No subscription is configured; finish setup first");
   if (!config.subscriptions.some((s) => s.id.toLowerCase() === subscriptionId.toLowerCase())) throw new LabRequestError("That subscription is not enabled in Settings");
@@ -81,7 +75,6 @@ export function prepareLab(config: LabctlConfig, req: LabRequest, now = new Date
     purpose,
     createdOn: now.toISOString().replace(/\.\d{3}Z$/, "Z"),
     labctlStack: stackName(labName),
-    ...(caseId ? { caseId } : {}),
   };
   const armParameters: Record<string, { value: unknown }> = {
     labName: { value: labName },
@@ -123,7 +116,7 @@ export function prepareRetry(
     labName: row.name,
     subscriptionId: row.subscription_id,
   });
-  // Keep the lab's live tags (expiry may have been extended, caseId set); only fill in what is missing.
+  // Keep the lab's live tags (expiry may have been extended); only fill in what is missing.
   const tags = { ...p.tags, ...currentTags };
   return { ...p, tags, expiresOn: tags[EXPIRES_TAG] ?? p.expiresOn, armParameters: { ...p.armParameters, tags: { value: tags } } };
 }
@@ -174,7 +167,6 @@ export async function validateLab(
   const p = prepareLab(config, req, new Date(), { skipRules: true });
   const rules = p.blueprint.rules?.(p.params) ?? [];
   const types = labResourceTypes(p.blueprint, p.params);
-  const apimSku = p.blueprint.apimSku?.(p.params);
   const quotas = p.blueprint.quotas?.(p.params);
   const vmSizes = p.blueprint.vmSizes?.(p.params) ?? [];
 
@@ -182,7 +174,6 @@ export async function validateLab(
     estimate(db, p.region, p.blueprint.meters(p.params), p.blueprint.notes),
     gatherFacts(arm, db, p.subscriptionId, p.region, {
       namespaces: namespacesOf([...types, "Microsoft.Resources/deploymentStacks"]),
-      apim: Boolean(apimSku),
       quotas: Boolean(quotas && Object.keys(quotas).length),
       vms: Boolean(vmSizes.length),
     }),
@@ -195,7 +186,6 @@ export async function validateLab(
       ttlHours: req.ttlHours,
       hourly: est.hourly,
       resourceTypes: types,
-      apimSku,
       quotas,
       vmSizes,
       rules,
@@ -206,18 +196,10 @@ export async function validateLab(
     facts,
   );
 
-  // Names: the group must be new and global names free (soft-deleted APIM names are reported as taken).
+  // Names: the group must be new and .
   const names: string[] = [];
   if (await exists(arm, `${rgIdFor(p.subscriptionId, p.labName)}?api-version=${RG_API}`)) names.push(`Resource group ${p.labName} already exists`);
-  const apimName = p.blueprint.apimName?.(p.labName);
-  if (apimName) {
-    const check = await arm.post<{ nameAvailable: boolean; message?: string }>(
-      `/subscriptions/${p.subscriptionId}/providers/Microsoft.ApiManagement/checkNameAvailability?api-version=${APIM_API}`,
-      { name: apimName },
-    );
-    if (!check.nameAvailable) names.push(`APIM name ${apimName}: ${check.message ?? "not available"}`);
-  }
-  checks.push(names.length ? { id: "names", label: "Names", status: "fail", detail: names.join("; ") } : { id: "names", label: "Names", status: "pass", detail: apimName ? `${p.labName}, ${apimName}` : p.labName });
+  checks.push(names.length ? { id: "names", label: "Names", status: "fail", detail: names.join("; ") } : { id: "names", label: "Names", status: "pass", detail: p.labName });
 
   // Template + policy: the stack's own validation (skipped when the configuration is already invalid).
   if (rules.length) {
@@ -385,7 +367,7 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
       if (!(opts.skipFirstPut && i === start)) {
         for (const h of p.blueprint.paramHooks ?? []) {
           if (h.fromStage > (stage.value ?? Number.MAX_SAFE_INTEGER) || ranHooks.has(h.hook)) continue;
-          save(i, "deploying", { detail: `${stage.label} · preparing ${h.label}`, stageStartedAt });
+          save(i, "deploying", { detail: `${stage.label} Â· preparing ${h.label}`, stageStartedAt });
           Object.assign(hookParams, await hooks[h.hook]({ arm, labName: p.labName, subscriptionId: p.subscriptionId, region: p.region, params: p.params, outputs }));
           ranHooks.add(h.hook);
           save(i, "deploying", { detail: stage.label, stageStartedAt });
@@ -406,7 +388,7 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
       if (stage.gate) {
         const gate = stage.gate;
         const gateStarted = Date.now();
-        save(i, "gate", { gate: gate.label, detail: "Checking…", stageStartedAt });
+        save(i, "gate", { gate: gate.label, detail: "Checkingâ€¦", stageStartedAt });
         const r = await runGate(gate, { x: probes, sub: p.subscriptionId, labName: p.labName, params: p.params, outputs }, {
           ...opts.gateOpts,
           onTick: (t) => save(i, "gate", { gate: gate.label, detail: t.detail, stageStartedAt }),
@@ -494,13 +476,7 @@ export async function labProgress(arm: ArmClient, sub: string, labName: string, 
 }
 
 /**
- * Removes the stack without deleting resources (detach), deletes the resource group, then purges
- * soft-deleted API Management instances so names and quota are released immediately.
- *
- * Deleting through the stack removes resources one by one, including APIM child resources (APIs,
- * operations) whose deletion goes through the gateway's management endpoint (3443). For VNet-injected
- * APIM that endpoint is unreachable while the network is torn down, so the stack retries for a long
- * time. A resource-group delete removes the service as a whole and lets Azure order everything.
+ * Removes the stack without deleting resources (detach), then deletes the resource group.\r\n *\r\n * Deleting through the stack removes resources one by one and can retry for a long time on child\r\n * resources; a resource-group delete removes everything as a whole and lets Azure order it.
  */
 export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: string, opts: { canTouch?: (id: string) => string | undefined } = {}): Promise<string> {
   updateLab(db, labName, { status: "destroying" });
@@ -537,11 +513,6 @@ export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: s
       await arm.lro("DELETE", rg, undefined, { timeoutMs: 2 * 60 * 60_000, pollMs: 15_000 });
       notes.push("group deleted");
     }
-    const purged = await purgeDeletedApim(arm, sub, `${labName}-`).catch((e: Error) => {
-      notes.push(e.message);
-      return [] as string[];
-    });
-    if (purged.length) notes.push(`purged ${purged.join(", ")}`);
     // A stack that was mid-delete refuses removal until that delete settles; with the group gone it
     // owns nothing, so try once more and leave no orphaned stack behind.
     if (await exists(arm, stackUrl(sub, labName)).catch(() => false)) {
@@ -564,38 +535,6 @@ export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: s
     updateLab(db, labName, { status: "failed", error: `Destroy: ${(e as Error).message}`.slice(0, 2000) });
     throw e;
   }
-}
-
-/**
- * Purges soft-deleted APIM instances. The purge's async-operation status is unreliable (it can keep
- * reporting in-progress after the entry is gone), so completion is confirmed by re-listing, with a hard cap.
- */
-export async function purgeDeletedApim(
-  arm: ArmClient,
-  sub: string,
-  namePrefix: string,
-  opts: { timeoutMs?: number; pollMs?: number; sleep?: (ms: number) => Promise<void> } = {},
-): Promise<string[]> {
-  const listUrl = `/subscriptions/${sub}/providers/Microsoft.ApiManagement/deletedservices?api-version=${APIM_API}`;
-  const sleep = opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
-  const mineIn = async () =>
-    (await arm.get<{ value: { id: string; name: string }[] }>(listUrl)).value.filter((d) => d.name.toLowerCase().startsWith(namePrefix.toLowerCase()));
-  const mine = await mineIn();
-  for (const d of mine) {
-    try {
-      await arm.raw("DELETE", `${d.id}?api-version=${APIM_API}`);
-    } catch (e) {
-      if (!(e instanceof ArmError && e.status === 404)) throw e;
-    }
-  }
-  const deadline = Date.now() + (opts.timeoutMs ?? 10 * 60_000);
-  let remaining = mine;
-  while (remaining.length && Date.now() < deadline) {
-    await sleep(opts.pollMs ?? 15_000);
-    remaining = await mineIn();
-  }
-  if (remaining.length) throw new Error(`APIM purge still pending for ${remaining.map((d) => d.name).join(", ")}`);
-  return mine.map((d) => d.name);
 }
 
 type StackState = { properties: { provisioningState: string; outputs?: Record<string, { value: unknown }>; error?: unknown } };
@@ -642,3 +581,6 @@ export function planReconcile(row: { name: string; status: string }, hasRunningJ
   }
   return undefined;
 }
+
+
+

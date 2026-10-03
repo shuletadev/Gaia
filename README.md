@@ -2,8 +2,8 @@
 
 # Project Gaia
 
-Azure lab control room: cost and orphan audits, park/resume, dependency-aware delete and quick API Management /
-networking labs. Internally the tool is still **labctl** — tags (`managedBy=labctl`), stack names, the CLI, the
+Azure lab control room: cost and orphan audits, park/resume, dependency-aware delete and preconfigured labs, growing into
+the operations center for a cloud-certification training business (see [docs/ROADMAP.md](docs/ROADMAP.md)). Internally the tool is still **labctl** — tags (`managedBy=labctl`), stack names, the CLI, the
 scheduled task and the database keep that name so existing labs and automations keep working.
 
 ## Team quick start
@@ -47,7 +47,7 @@ monogram tiles. The type → icon mapping lives in `web/src/iconMap.ts`.
 |---|---|
 | `npm run dev` | API (watch mode) + Vite dev server on http://127.0.0.1:5173 |
 | `npm run audit` | Read-only baseline audit; writes `data/reports/baseline-*.md` and `.json` |
-| `npm test` | Unit tests (guards, security checks, audit rules, ARM retry) |
+| `npm test` | Unit tests (guards, security checks, audit rules, ARM retry, lab engine) |
 | `npm run typecheck` | TypeScript check |
 | `npm run package` | Shareable zip of the last commit (see [Sharing](#sharing)) |
 
@@ -148,103 +148,63 @@ resource would hold the group delete hostage. Notes flag soft-deleted services (
 
 ## Lab catalog
 
-| Blueprint | What you get | ≈ $/hr (centralus) | Deploy |
-|---|---|---|---|
-| `apim-v2-quickstart` | APIM Basic v2 / Standard v2, public, with an httpbin sample API | 0.21 / 0.96 | 2–10 min |
-| `apim-classic` | **Vanilla APIM** on Developer / Basic / Standard / Premium (1–12 units), optional External/Internal VNet injection (stv2 NSG + own public IP), optional sample API. Presets: Developer, Developer · Internal VNet, Premium, Premium · External VNet | 0.07 / 0.20 / 0.94 / 3.83 per unit | 25–90 min |
-| `apim-private-endpoint` | APIM (classic tier) reached through an inbound **Private Endpoint** (`Gateway`), `privatelink.azure-api.net` zone linked to a client VNet, public access switched off afterwards (it must be on at creation) | 0.08 | 45–90 min |
-| `frontdoor-apim` | **Front Door** Standard/Premium → APIM Basic v2 / Standard v2 origin, optional `X-Azure-FDID` check so the gateway only answers through this profile | 0.25 (Std) | 15–40 min |
-| `hub-spoke-firewall` | Hub VNet + Azure Firewall Basic (policy, mgmt NIC), 1–3 peered spokes forced through the firewall by UDR | 0.41 | 10–20 min |
-| `apim-internal-appgw` | APIM Developer in **internal** VNet mode (stv2 NSG rules, own public IP), `azure-api.net` private zone, App Gateway WAF_v2 (DRS 2.1) publishing it | 0.52 | 40–75 min |
-| `apim-selfhosted` | APIM Developer/Premium + gateway resource + API assigned to it, and the **v2 self-hosted gateway** container with the token wired in — on a B2s Linux VM running Docker (default; ports 8080/8081 only) or on Azure Container Apps (consumption, 0.5 vCPU) | 0.11 / 0.12 | 30–55 min |
-| `apim-workspaces` | APIM **Premium** with a workspace (*Team A*), an API inside it and a dedicated **workspace gateway** (Standard/Premium) | 4.51 / 5.75 | 45–80 min |
-| `appgw-mtls` | App Gateway Standard_v2 with **frontend mutual TLS** (SSL profile, trusted client CA, optional issuer-DN check), client-cert headers forwarded to httpbin; certificates generated for you | 0.25 | 8–20 min |
-| `dns-resolver-hybrid` | **DNS Private Resolver**: inbound endpoint (static 10.95.0.4), outbound endpoint, forwarding ruleset (`onprem.contoso.test` → 10.200.0.4), `lab.internal` zone, optional spoke using the resolver as DNS | 0.50 | 5–15 min |
+The catalog is being rebuilt for the training business (see [docs/ROADMAP.md](docs/ROADMAP.md)): the original
+API Management / networking blueprints were removed, and new showcase scenarios are added under `blueprints/<id>/`
+as Bicep (preferably [Azure Verified Modules](https://aka.ms/avm)). `server/labs/blueprints.ts` declares each
+blueprint's parameters, rules, presets, stages/gates, quotas, progress steps and price meters; a blueprint can also
+be created from an existing resource group with **Save as blueprint** (below).
 
-`apim-classic` also takes a **2nd region** (Premium, VNet None): an additional location with the same units, billed at
-the primary region's unit price and checked for tier availability in that region.
-
-Blueprints live in `blueprints/<id>/` as Bicep built on [Azure Verified Modules](https://aka.ms/avm). AVM defaults that
-inflate lab cost (zones `[1,2,3]`, APIM capacity 3, fixed App Gateway capacity 2) are overridden explicitly.
-`server/labs/blueprints.ts` declares each blueprint's parameters, rules, presets, stages/gates, quotas, progress steps
-and price meters.
-
-**Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the public
-[Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices) (Front Door's
-monthly base fee is spread per hour; the private endpoint uses its list price). Invalid combinations (e.g. VNet injection on
-Standard, 2 Developer units) are flagged as you choose them and rejected by the server.
+**Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the
+public [Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices).
+Invalid combinations are flagged as you choose them and rejected by the server.
 
 **Feasibility preflight** — *Check & launch* runs every check that can fail a deployment before anything is created;
 a clean result launches straight away, failures block (with a fix where possible) and warnings need *Launch anyway*:
 
 | Check | Source |
 |---|---|
-| Configuration | Blueprint rules (tier vs VNet mode, units per tier) |
+| Configuration | Blueprint rules |
 | Resource providers | Registration state per namespace — **Register** button when missing |
 | Available in region | Provider metadata per resource type (global types pass) |
-| APIM tier | Subscription SKU catalog: offered + unrestricted in the region, units ≤ regional capacity; suggests regions that have it |
 | Network quotas | `Microsoft.Network` regional usages (public IPs, VNets, NSGs, App Gateways, route tables, private endpoints) |
 | VM sizes | Compute SKU list for the region (offered, not `NotAvailableForSubscription`) and family + regional vCPU quota |
 | Permissions | Effective RBAC actions (wildcards and notActions) for every `…/write` the lab needs |
-| Lifetime | Deploy time (per parameters, e.g. Premium/VNet take longer) vs the chosen lifetime |
+| Lifetime | Deploy time vs the chosen lifetime |
 | Budget | Lab cost over its lifetime vs the live month-end forecast and budget; any lab ≥ $1/h warns |
-| Names | Resource group free; APIM name available (soft-deleted names count as taken) |
+| Names | Resource group free |
 | Template + policy | Deployment-stack *validate* (template, Azure Policy) |
 
-**Stages and readiness gates** — blueprints deploy in stages (the template's `stage` parameter; every stage contains the
-previous ones, so the stack never deletes earlier work). After each stage a gate polls for the *real* signal before the
-next stage starts:
+**Stages and readiness gates** — blueprints can deploy in stages (the template's `stage` parameter; every stage
+contains the previous ones, so the stack never deletes earlier work). After each stage a gate polls for the *real*
+signal before the next stage starts. Today there is one gate kind, `http-ok` (an output `url` answers 200); more are
+added in `server/labs/gates.ts` as blueprints need them. Blocking gates fail the lab with the stage and reason;
+**Resume k/N** continues from that stage instead of starting over. Gates on the last stage are non-blocking: the lab
+is Ready with a readiness warning.
 
-| Gate | Waits for | Used by |
-|---|---|---|
-| APIM ready | `Succeeded`, private IP (VNet modes), required `/networkstatus` dependencies `Success`, gateway `status-0123456789abcdef` 200 when publicly reachable | quick start, classic, PE, internal + App GW, Front Door |
-| Firewall IP | Firewall `Succeeded` with a private IP (routes need it) | hub-spoke |
-| Peerings | Every peering `Connected` / `FullyInSync` | hub-spoke |
-| App GW end-to-end | Backend health `Healthy`, then the sample request returns 200 | internal + App GW |
-| PE approved | Connection `Approved`, endpoint NIC IP, `privatelink.azure-api.net` A record → that IP | PE |
-| Public gateway closed | `publicNetworkAccess=Disabled` and a public API call rejected with 403 (the `status-0123456789abcdef` health endpoint keeps answering 200 by design) | PE |
-| Edge 200 | Front Door endpoint 200 (propagation 10–20 min) and the direct gateway call blocked (403) | Front Door |
-| Self-hosted gateway | The VM / Container App serves `/httpbin/get` through the v2 gateway | self-hosted |
-| Workspace gateway | The workspace gateway hostname serves the workspace API | workspaces |
-| mTLS | 200 with the client certificate, refused without it (400), cert headers seen by the backend | App GW mTLS |
-| Resolver | Resolver `Connected`, inbound/outbound endpoints provisioned, inbound IP | DNS resolver |
+**Generated values** — a stage can need a value only labctl can produce. Blueprints declare *parameter hooks*
+(`server/labs/hooks.ts`; today `vm-password`, a random admin password). Pre-launch validation uses placeholders.
 
-Blocking gates (needed by the next stage) fail the lab with the stage and reason; **Resume k/N** continues from that
-stage instead of starting over. Gates on the last stage are non-blocking: the lab is Ready with a readiness warning.
-The Labs card shows a stage track, the live gate status and **~N min left**.
+**Learned deploy times** — every run records stage, gate and total durations per blueprint *variant* in
+`lab_timings`; earlier labs are backfilled. Estimates, the lifetime check and the ETA use your last runs (same region
+preferred) and fall back to the static range until there is data.
 
-**Generated values** — some stages need values only labctl can produce: the self-hosted gateway **token** (generated
-through ARM `generateToken` after APIM exists, passed as a secure parameter), a random gateway **VM password** (no SSH\nport is opened) and the mTLS **certificates** (a lab CA,
-a server certificate for the gateway's DNS name and a client certificate, generated locally with node-forge and kept
-in `data/labs/<lab>/` with `client.pfx` (password `labctl`) and a ready Windows `curl` command shown on the lab — deleted
-with the lab). Pre-launch validation uses placeholders for them.
-
-**Learned deploy times** — every run records stage, gate and total durations per blueprint *variant* (tier, VNet mode,
-regions…) in `lab_timings`; earlier labs are backfilled. Estimates, the lifetime check and the ETA use your last runs
-(same region preferred) and fall back to the static range until there is data.
-
-**Cheapest viable** — when the checks show a blocker another region or tier avoids (tier not offered, quota, a recent
-capacity shortage) or cost pressure, the launch dialog lists deployable alternatives sorted by price — same setup in
-another enabled region, or a blueprint-declared cheaper variant with what it gives up (e.g. *Developer instead of
-Premium — loses SLA, scale units, zones and multi-region*) — plus the longest lifetime that keeps the month within
-budget. **Apply** fills them in.
+**Cheapest viable** — when the checks show a blocker another region or tier avoids, or cost pressure, the launch dialog
+lists deployable alternatives sorted by price — same setup in another enabled region, or a blueprint-declared cheaper
+variant with what it gives up — plus the longest lifetime that keeps the month within budget. **Apply** fills them in.
 
 **Capacity memory** — regional shortages can't be queried ahead of time. When a deployment fails with one
-(`…CapacityHeavyUsage`, `AllocationFailed`, `SkuNotAvailable`…), it's remembered for 24 h per blueprint *variant*: launches of\nthat variant in that region get a *Capacity* warning and alternatives move to another region or host (e.g. the\nself-hosted gateway's Container Apps host was short in centralus and eastus while its VM host was fine).
+(`…CapacityHeavyUsage`, `AllocationFailed`, `SkuNotAvailable`…), it's remembered for 24 h per blueprint *variant*:
+launches of that variant in that region get a *Capacity* warning and alternatives move elsewhere.
 
 **Lifecycle** — each lab is a subscription-scope **deployment stack** (`labctl-<lab>`) that owns a tagged resource group
-(`managedBy=labctl`, `expiresOn`, `blueprint`, `purpose`, `owner`, `createdOn`, optional `caseId`). Destroy removes the
-stack without touching resources (detach), deletes the resource group — letting Azure order everything — then purges
-soft-deleted API Management so names are reusable immediately. (Deleting *through* the stack removes resources one by
-one, including APIM APIs/operations via the management endpoint on 3443, which is unreachable for VNet-injected APIM
-while its network is torn down.) The Labs screen shows live per-module progress, outputs (URLs, sample `curl`),
-countdown, running cost, **+4h / +1d**, **Retry / Resume** for failed deployments (re-applies the blueprint to the same
-stack from the failed stage, keeping expiry and case tags) and **Destroy**, plus a history with estimated cost per lab.
+(`managedBy=labctl`, `expiresOn`, `blueprint`, `purpose`, `owner`, `createdOn`). Destroy removes the stack without
+touching resources (detach), then deletes the resource group, letting Azure order everything. The Labs screen shows
+live per-module progress, outputs, countdown, running cost, **+4h / +1d**, **Retry / Resume** for failed deployments
+and **Destroy**, plus a history with estimated cost per lab.
 
 **Expiry** — a local sweeper runs at start-up and every `labs.sweepIntervalMinutes` (default 15) while the app is
 open, destroying only groups that pass the auto-delete policy. After a restart, labs left mid-deploy or mid-destroy are
-reconciled against Azure (staged labs wait for the in-flight stage, then continue with its gate and the remaining
-stages; destroys are re-run or marked done).
+reconciled against Azure. `npm run sweep [-- --dry-run]` runs one sweep from the command line.
 
 Set `LABCTL_PORT` / `LABCTL_SWEEP=0` to run a second instance (e.g. for testing) alongside your main one.
 
@@ -252,34 +212,11 @@ Set `LABCTL_PORT` / `LABCTL_SWEEP=0` to run a second instance (e.g. for testing)
 
 | Feature | Where | What it does |
 |---|---|---|
-| **Validate** | Lab card · Inventory group header (pulse icon) | Per-type health checks: App Gateway **backend health** (with probe log), APIM provisioning, gateway `/status-0123456789abcdef` probe and VNet **network status** dependencies, firewall allocation / private IP / rules, route-table **next hops** (black-holed, parked firewall, or a *public* IP such as a firewall's or APIM's — with the correct private IP), VNet **peerings** (state, sync, deleted remote VNet), private DNS zone **links** and `azure-api.net` A records vs APIM private IPs, public IP DNS names, plus end-to-end HTTP probes from lab outputs. Problems on unattached route tables are reported as *latent* warnings. |
-| **Topology** | Lab card · Inventory group header | Network diagram laid out with ELK: VNets → subnets → injected resources (official icons), NSG / route table / NAT badges on subnets, UDR next-hop edges, peerings, private DNS links, public IPs folded onto their owners, *reserved-for* links, out-of-group dependencies dashed, unlinked resources in a grid. Pan/zoom, hover to isolate, **Download SVG** (icons inlined). |
-| **Save as blueprint** | Inventory group header (upload icon) | Exports a resource group's template and makes it re-deployable as a lab: names derived from the lab name, global names and DNS labels prefixed, location/tags parameterised, VNet inline-peering cycles removed, outside references flagged. Keeps `lab.bicep` when the decompiled Bicep compiles, otherwise deploys `lab.json` (ARM). Priced from the template's SKUs. Saved in `blueprints/custom-*` (git-ignored). |
-| **Repro from case** | Catalog | Paste a case # and symptoms; keyword signals (App Gateway, internal/stv2, 502/backend health, private DNS, firewall, UDR, spokes, v2 tiers, policies, regions…) pick a blueprint, parameters and region with the reasons shown. The lab is tagged `caseId`; the case text is analysed locally and not stored. |
+| **Validate** | Lab card · Inventory group header (pulse icon) | Per-type health checks: App Gateway **backend health**, APIM provisioning and network status, firewall allocation / rules, route-table **next hops**, VNet **peerings**, private DNS zone **links**, public IP DNS names, plus end-to-end HTTP probes from lab outputs. Problems on unattached route tables are reported as *latent* warnings. |
+| **Topology** | Lab card · Inventory group header | Network diagram laid out with ELK: VNets → subnets → injected resources (official icons), NSG / route table / NAT badges on subnets, UDR next-hop edges, peerings, private DNS links, public IPs folded onto their owners, out-of-group dependencies dashed. Pan/zoom, hover to isolate, **Download SVG**. |
+| **Save as blueprint** | Inventory group header (upload icon) | Exports a resource group's template and makes it re-deployable as a lab: names derived from the lab name, global names and DNS labels prefixed, location/tags parameterised. Keeps `lab.bicep` when the decompiled Bicep compiles, otherwise deploys `lab.json` (ARM). Saved in `blueprints/custom-*` (git-ignored). |
 
 The UI defaults to **dark mode**; the sun/moon button in the sidebar switches and remembers the choice.
-
-## Automations
-
-These are personal and optional: the Windows task works for anyone (`npm run task -- -Install`); the Teams nudges
-and weekly report are Scout automations set up for one user.
-
-| What | How | Where it reports |
-|---|---|---|
-| **Expiry sweep at logon / unlock** | Windows task `\labctl\labctl expiry sweep` runs `scripts/sweep.ts` hidden (via `conhost --headless`), so expired labs are destroyed even when the app is closed. Never runs two copies at once. | `data/logs/sweep.log` |
-| **Expiry nudges** | `scripts/nudge.ts` lists labs expiring within 75 min, or overdue and still running; each lab + expiry is reported once (an Extend resets it). Prints `NONE` otherwise. | Teams via a Scout automation (every 30 min, 7am–10pm) |
-| **Weekly report** | `scripts/weekly-report.ts` runs a fresh audit and summarises spend vs budget and forecast, week-over-week trend, labs launched / running, open findings and what changed since the last report. | Teams via a Scout automation (Mondays 9am); copy in `data/reports/weekly-*.txt` |
-
-```powershell
-npm run task -- -Install | -Status | -Run | -Uninstall   # manage the logon/unlock task
-npm run sweep [-- --dry-run]                          # sweep now from the command line
-npm run nudge                                         # preview nudges (add -- --mark to record them as sent)
-npm run weekly                                        # print this week's report
-```
-
-The app, the task and the scripts share `data/labctl.db`. Each job records its process ID, and a "running" job is only
-treated as interrupted when that process is gone; job start is a single write transaction, so two processes can never
-work on the same lab at once.
 
 ## Safety model
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { liveProject, project } from "../server/azure/cost.ts";
 import { BLUEPRINTS, CATEGORIES, categoryOf } from "../server/labs/blueprints.ts";
-import { buildWeekly } from "../server/labs/weekly.ts";
+import { registerFixtureBlueprint } from "./helpers.ts";
+
+registerFixtureBlueprint();
 
 const now = new Date("2026-10-03T01:00:00Z");
 const daily = [
@@ -45,23 +47,6 @@ describe("live forecast", () => {
   it("averages only complete days and ignores today", () => {
     const withToday = [...byResource, { key: apim, date: "2026-10-03", cost: 100 }];
     expect(liveProject(daily, withToday, () => true, () => false, now).window).not.toContain("2026-10-03");
-  });
-
-  it("weekly report uses the live forecast and says how much of the trend is deleted resources", () => {
-    const live = liveProject(daily, byResource, (id) => id !== fw, () => false, now);
-    const text = buildWeekly({
-      now,
-      report: { subscription: { id: "s", name: "Sub" }, totals: { budgetUsd: 600, costMtdUsd: 60, flaggedCost30dUsd: 0 }, findings: [], topResources: [] } as never,
-      daily,
-      projection: project(daily, now),
-      live,
-      labs: [],
-      running: [],
-      appUrl: "http://x",
-    });
-    expect(text).toMatch(/^🌍 Project Gaia weekly/);
-    expect(text).toContain(`forecast $${Math.round(live.liveForecastMonth)}`);
-    expect(text).toMatch(/still counts \$9\.48\/day of deleted resources/);
   });
 });
 

@@ -3,8 +3,6 @@ import { buildTopology } from "../server/topology.ts";
 import { breakPeeringCycles, metersFromTemplate, nameExpression, transformExport } from "../server/labs/exportTransform.ts";
 import { shortPath } from "../server/azure/arm.ts";
 import { guessMinutes, pickIcons } from "../server/labs/export.ts";
-import { extractCaseId, suggestRepro } from "../server/labs/repro.ts";
-import { BLUEPRINTS } from "../server/labs/blueprints.ts";
 import { prepareLab } from "../server/labs/engine.ts";
 import { config, res, rgId } from "./helpers.ts";
 
@@ -146,46 +144,5 @@ describe("export transform", () => {
       "Microsoft.Network/azureFirewalls",
     ]);
     expect(guessMinutes(["Microsoft.ApiManagement/service"])).toEqual([10, 75]);
-  });
-});
-
-describe("repro", () => {
-  const regions = config.labs.regions.concat(["eastus2"]);
-
-  it("finds DfM case numbers and labelled IDs", () => {
-    expect(extractCaseId("Sev B 1234567890123456 customer reports")).toBe("1234567890123456");
-    expect(extractCaseId("Case #ABC-12345: 502s")).toBe("ABC-12345");
-    expect(extractCaseId("no id here")).toBeUndefined();
-  });
-
-  it("maps an App Gateway + internal APIM 502 case", () => {
-    const s = suggestRepro("1234567890123456 Customer gets 502 Bad Gateway from App Gateway in front of internal APIM (stv2) in East US 2; backend health unhealthy after private DNS change. WAF false positives too.", BLUEPRINTS, regions);
-    expect(s).toMatchObject({ blueprint: "apim-internal-appgw", caseId: "1234567890123456", region: "eastus2", params: { wafMode: "Detection" } });
-    expect(s.reasons).toEqual(expect.arrayContaining(["Application Gateway / WAF", "APIM in internal / injected VNet mode", "Backend health / 502 symptoms", "Private DNS for azure-api.net"]));
-    expect(s.purpose.startsWith("Case 1234567890123456: Customer gets 502")).toBe(true);
-  });
-
-  it("maps firewall / UDR / spoke-to-spoke cases with spoke count", () => {
-    const s = suggestRepro("Asymmetric routing: spoke-to-spoke traffic via Azure Firewall drops; UDR 0.0.0.0/0 next hop firewall. central us", BLUEPRINTS, regions);
-    expect(s).toMatchObject({ blueprint: "hub-spoke-firewall", region: "centralus", params: { spokeCount: 2 } });
-    expect(suggestRepro("1234567890123456 - Customer sees drops", BLUEPRINTS, regions).purpose).toBe("Case 1234567890123456: Customer sees drops");
-  });
-
-  it("maps v2 policy cases and picks Standard v2 for VNet integration", () => {
-    const s = suggestRepro("Standard v2 APIM, validate-jwt policy rejects tokens when calling private backend through VNet integration", BLUEPRINTS, regions, "SR-778");
-    expect(s).toMatchObject({ blueprint: "apim-v2-quickstart", caseId: "SR-778", params: { sku: "StandardV2" } });
-  });
-
-  it("falls back to the quick start with no signal, and offers alternatives", () => {
-    expect(suggestRepro("something odd happens", BLUEPRINTS, regions)).toMatchObject({ blueprint: "apim-v2-quickstart", score: 0 });
-    const s = suggestRepro("App Gateway in front of APIM, firewall in the hub", BLUEPRINTS, regions);
-    expect(s.alternatives.length).toBeGreaterThan(0);
-  });
-
-  it("tags the case on the lab and validates the ID", () => {
-    const p = prepareLab(config, { blueprint: "apim-v2-quickstart", region: "centralus", params: {}, ttlHours: 24, caseId: "1234567890123456" });
-    expect(p.tags.caseId).toBe("1234567890123456");
-    expect(p.tags.purpose).toBe("Case 1234567890123456");
-    expect(() => prepareLab(config, { blueprint: "apim-v2-quickstart", region: "centralus", params: {}, ttlHours: 24, caseId: "bad id!" })).toThrow("Case ID");
   });
 });

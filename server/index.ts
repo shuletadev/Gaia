@@ -22,7 +22,6 @@ import { readTags } from "./actions/tags.ts";
 import { expiresAt, getTag, isLabManaged } from "./guard.ts";
 import { allBlueprints, categoryOf, CATEGORIES, deployMinutesFor, getBlueprint, stagesFor } from "./labs/blueprints.ts";
 import { exportToBlueprint, removeCustomBlueprint } from "./labs/export.ts";
-import { suggestRepro } from "./labs/repro.ts";
 import { estimate } from "./labs/pricing.ts";
 import { forgetProvider } from "./labs/feasibility.ts";
 import { suggestAlternatives } from "./labs/alternatives.ts";
@@ -292,7 +291,6 @@ const labRequest = z.object({
   ttlHours: z.number(),
   purpose: z.string().max(200).optional(),
   labName: z.string().optional(),
-  caseId: z.string().max(40).optional(),
   subscriptionId: z.string().regex(/^[0-9a-f-]{36}$/i).optional(),
 });
 
@@ -353,11 +351,6 @@ app.delete("/api/blueprints/:id", async (req) => {
   return { ok: true };
 });
 
-app.post("/api/labs/repro", async (req) => {
-  const body = z.object({ text: z.string().min(3).max(8000), caseId: z.string().max(40).optional() }).parse(req.body);
-  // The case text is only analysed here; nothing but the suggestion (and later the lab tags) is kept.
-  return suggestRepro(body.text, allBlueprints(), config.labs.regions, body.caseId);
-});
 app.post("/api/labs/estimate", async (req) => {
   const body = z.object({ blueprint: z.string(), region: z.string(), params: z.record(z.string(), z.unknown()).default({}) }).parse(req.body);
   const p = asGuard(() => prepareLab(config, { ...body, ttlHours: 1 }, new Date(), { skipRules: true }));
@@ -459,7 +452,6 @@ app.get("/api/labs", async () => {
       stage: readStageState(r) ?? null,
       etaMinutes: r.status === "deploying" ? labEta(r) : undefined,
       exists: Boolean(g),
-      caseId: getTag(g?.tags, "caseId") ?? null,
       resourceGroupId: rgIdFor(r.subscription_id, r.name),
     };
   });
@@ -482,7 +474,6 @@ app.get("/api/labs", async () => {
       error: null,
       stage: null,
       exists: true,
-      caseId: getTag(g.tags, "caseId") ?? null,
       resourceGroupId: g.id,
     }));
   return { labs: [...adopted, ...labs], sweep: { last: sweeper.last, nextAt: sweeper.nextAt, enabled: config.labs.sweepEnabled } };
@@ -614,3 +605,5 @@ async function reconcileLabs() {
     } else jobs.start("lab.destroy", rgId, row.name, () => destroyLab(arm, db, row.subscription_id, row.name, { canTouch: touchGuard }));
   }
 }
+
+

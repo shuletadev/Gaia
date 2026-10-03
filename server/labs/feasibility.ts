@@ -22,13 +22,6 @@ export interface ProviderInfo {
   resourceTypes: { resourceType: string; locations: string[] }[];
 }
 
-export interface ApimSkuInfo {
-  name: string;
-  locations: string[];
-  capacity?: { minimum?: number; maximum?: number };
-  restrictions?: { type?: string; values?: string[]; reasonCode?: string }[];
-}
-
 export interface PermissionEntry {
   actions: string[];
   notActions: string[];
@@ -46,7 +39,6 @@ export interface AzureFacts {
   providers: Record<string, ProviderInfo | undefined>;
   vmSkus?: VmSkuInfo[];
   computeUsages?: { name: string; current: number; limit: number }[];
-  apimSkus?: ApimSkuInfo[];
   usages?: { name: string; current: number; limit: number }[];
   permissions?: PermissionEntry[];
   errors: Record<string, string>;
@@ -58,7 +50,6 @@ export interface FeasibilityInput {
   ttlHours: number;
   hourly: number;
   resourceTypes: string[];
-  apimSku?: { sku: string; units: number; extraRegions?: string[] };
   quotas?: Record<string, number>;
   rules: string[];
   deployMinutes: [number, number];
@@ -129,36 +120,6 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
       : { id: "region", label: `Available in ${i.region}`, status: "pass", detail: `${i.resourceTypes.length} resource types` },
   );
 
-  // API Management tier and units for this region.
-  if (i.apimSku) {
-    const { sku, units } = i.apimSku;
-    if (!f.apimSkus) {
-      out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "warn", detail: f.errors.apimSkus ?? "SKU catalog unavailable" });
-    } else {
-      const entries = f.apimSkus.filter((s) => s.name.toLowerCase() === sku.toLowerCase());
-      const here = entries.filter((s) => s.locations.map(normRegion).includes(region));
-      const restricted = here.flatMap((s) => s.restrictions ?? []).find((r) => !r.values?.length || r.values.map(normRegion).includes(region));
-      const offeredIn = i.enabledRegions.filter((r) => entries.some((s) => s.locations.map(normRegion).includes(normRegion(r)) && !(s.restrictions ?? []).length));
-      const alt = offeredIn.filter((r) => normRegion(r) !== region);
-      if (!entries.length) out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "fail", detail: "Tier not offered to this subscription" });
-      else if (!here.length) out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "fail", detail: `Not offered in ${i.region}${alt.length ? `; try ${alt.join(", ")}` : ""}` });
-      else if (restricted) out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "fail", detail: `Restricted in ${i.region} (${restricted.reasonCode ?? restricted.type ?? "restriction"})${alt.length ? `; try ${alt.join(", ")}` : ""}` });
-      else {
-        const max = Math.max(...here.map((s) => s.capacity?.maximum ?? 0));
-        if (max && units > max) out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "fail", detail: `${units} units requested, ${i.region} allows ${max}` });
-        else out.push({ id: "apim-sku", label: `APIM ${sku}`, status: "pass", detail: `${units} unit${units > 1 ? "s" : ""} of max ${max || "?"}` });
-      }
-      // Additional regions (multi-region Premium) need the tier there too, and must differ from the primary.
-      for (const extra of i.apimSku.extraRegions ?? []) {
-        const er = normRegion(extra);
-        const label = `APIM ${sku} in ${extra}`;
-        if (er === region) out.push({ id: `apim-sku-${er}`, label, status: "fail", detail: "Second region is the same as the primary region" });
-        else if (!entries.some((s) => s.locations.map(normRegion).includes(er))) out.push({ id: `apim-sku-${er}`, label, status: "fail", detail: `Not offered in ${extra}` });
-        else out.push({ id: `apim-sku-${er}`, label, status: "pass", detail: `${units} unit${units > 1 ? "s" : ""} as an additional location` });
-      }
-    }
-  }
-
   // Regional network quotas.
   const needs = Object.entries(i.quotas ?? {}).filter(([, n]) => n > 0);
   if (needs.length) {
@@ -225,7 +186,7 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
   const ttlMin = i.ttlHours * 60;
   if (minMin >= ttlMin) out.push({ id: "ttl", label: "Lifetime", status: "fail", detail: `Deploy takes ${minMin}+ min; lifetime is ${i.ttlHours} h` });
   else if (maxMin > ttlMin / 2) out.push({ id: "ttl", label: "Lifetime", status: "warn", detail: `Deploy can take ${maxMin} min of the ${i.ttlHours} h lifetime` });
-  else out.push({ id: "ttl", label: "Lifetime", status: "pass", detail: `${minMin}–${maxMin} min to deploy, ${i.ttlHours} h to use` });
+  else out.push({ id: "ttl", label: "Lifetime", status: "pass", detail: `${minMin}â€“${maxMin} min to deploy, ${i.ttlHours} h to use` });
 
   // Budget impact.
   const labCost = i.hourly * i.ttlHours;
@@ -237,7 +198,7 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
   } else if (forecast + labCost > B) {
     out.push({ id: "budget", label: "Budget", status: "warn", detail: `Forecast ${usd(forecast)} + ~${usd(labCost)} passes ${usd(B)}` });
   } else if (high || labCost > B * 0.2) {
-    out.push({ id: "budget", label: "Budget", status: "warn", detail: `${usd(i.hourly)}/h — ~${usd(labCost)} for ${i.ttlHours} h (forecast ${usd(forecast)} of ${usd(B)})` });
+    out.push({ id: "budget", label: "Budget", status: "warn", detail: `${usd(i.hourly)}/h â€” ~${usd(labCost)} for ${i.ttlHours} h (forecast ${usd(forecast)} of ${usd(B)})` });
   } else {
     out.push({ id: "budget", label: "Budget", status: "pass", detail: `~${usd(labCost)} for ${i.ttlHours} h; forecast ${usd(forecast)} of ${usd(B)}` });
   }
@@ -265,7 +226,7 @@ export async function gatherFacts(
   db: Db,
   sub: string,
   region: string,
-  opts: { namespaces: string[]; apim: boolean; quotas: boolean; vms?: boolean },
+  opts: { namespaces: string[]; quotas: boolean; vms?: boolean },
 ): Promise<AzureFacts> {
   const errors: Record<string, string> = {};
   const providers: Record<string, ProviderInfo | undefined> = {};
@@ -279,16 +240,6 @@ export async function gatherFacts(
       return v.value;
     });
   });
-  const skus = opts.apim
-    ? tryFact(errors, "apimSkus", async () =>
-        (
-          await cached<ApimSkuInfo[]>(db, `feas:${sub}:apimSkus`, 6 * HOUR, false, async () => {
-            const r = await arm.get<{ value: (ApimSkuInfo & { resourceType?: string })[] }>(`/subscriptions/${sub}/providers/Microsoft.ApiManagement/skus?api-version=2024-05-01`);
-            return r.value.filter((s) => !s.resourceType || s.resourceType === "service").map((s) => ({ name: s.name, locations: s.locations, capacity: s.capacity, restrictions: s.restrictions }));
-          })
-        ).value,
-      )
-    : Promise.resolve(undefined);
   const usages = opts.quotas
     ? tryFact(errors, "usages", async () =>
         (
@@ -336,10 +287,9 @@ export async function gatherFacts(
         ).value,
       )
     : Promise.resolve(undefined);
-  const [s, u, p, vs, cu] = await Promise.all([skus, usages, permissions, vmSkus, computeUsages, ...providerTasks]);
+  const [u, p, vs, cu] = await Promise.all([usages, permissions, vmSkus, computeUsages, ...providerTasks]);
   return {
     providers,
-    apimSkus: s as ApimSkuInfo[] | undefined,
     usages: u as AzureFacts["usages"],
     permissions: p as PermissionEntry[] | undefined,
     vmSkus: vs as VmSkuInfo[] | undefined,
@@ -347,3 +297,5 @@ export async function gatherFacts(
     errors,
   };
 }
+
+

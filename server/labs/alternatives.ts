@@ -31,7 +31,7 @@ export interface AlternativesResult {
 }
 
 /** Checks that decide whether a candidate can be deployed at all (cost and naming are judged separately). */
-const BLOCKING = /^(config|providers|region|apim-sku.*|quota|rbac|vm-.*)$/;
+const BLOCKING = /^(config|providers|region|quota|rbac|vm-.*)$/;
 export const isViable = (checks: FeasibilityCheck[]) => !checks.some((c) => c.status === "fail" && BLOCKING.test(c.id));
 
 /** "Tier: Developer (was Premium)" for each field that differs. */
@@ -87,12 +87,10 @@ export async function suggestAlternatives(
     const parsed = b.schema.parse(params) as Record<string, unknown>;
     const rules = b.rules?.(parsed) ?? [];
     const types = labResourceTypes(b, parsed);
-    const apimSku = b.apimSku?.(parsed);
     const quotas = b.quotas?.(parsed);
     const vmSizes = b.vmSizes?.(parsed) ?? [];
     const facts = await gatherFacts(arm, db, base.subscriptionId, region, {
       namespaces: namespacesOf([...types, "Microsoft.Resources/deploymentStacks"]),
-      apim: Boolean(apimSku),
       quotas: Boolean(quotas && Object.keys(quotas).length),
       vms: Boolean(vmSizes.length),
     });
@@ -104,7 +102,6 @@ export async function suggestAlternatives(
         ttlHours: req.ttlHours,
         hourly: est.hourly,
         resourceTypes: types,
-        apimSku,
         quotas,
         vmSizes,
         rules,
@@ -152,3 +149,5 @@ export async function suggestAlternatives(
     ttl: hours ? { hours, reason: `keeps the month within $${config.budget.monthlyUsd} (forecast $${Math.round(forecast!)})` } : undefined,
   };
 }
+
+

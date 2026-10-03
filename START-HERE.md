@@ -3,7 +3,7 @@
 Version 0.1.0 · build 33e065b · packaged 2026-10-03
 
 Gaia is a local control room for your own Azure sandbox: cost and orphan audits, park/resume,
-dependency-aware delete and quick API Management / networking labs.
+dependency-aware delete and preconfigured labs.
 
 ## Is it safe to run?
 

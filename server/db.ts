@@ -60,12 +60,6 @@ export function openDb(path = resolve(DATA_DIR, "labctl.db")): Db {
       outputs_json TEXT,
       error TEXT
     );
-    CREATE TABLE IF NOT EXISTS nudges (
-      lab TEXT NOT NULL,
-      expires_on TEXT NOT NULL,
-      sent_at TEXT NOT NULL,
-      PRIMARY KEY (lab, expires_on)
-    );
   `);
   // Older databases predate the pid column.
   const cols = db.prepare("PRAGMA table_info(jobs)").all() as { name: string }[];
@@ -91,7 +85,7 @@ export function isProcessAlive(pid: number | null | undefined): boolean {
 
 /**
  * The app, the logon sweep and the CLI scripts share this database. A "running" job is only
- * interrupted if the process that owns it is gone — never just because another process started.
+ * interrupted if the process that owns it is gone â€” never just because another process started.
  */
 export function recoverInterruptedJobs(db: Db, alive: (pid: number | null) => boolean = isProcessAlive): number {
   const rows = db.prepare("SELECT id, pid FROM jobs WHERE status = 'running'").all() as { id: string; pid: number | null }[];
@@ -212,3 +206,4 @@ export function latestAuditRun<T>(db: Db, subscriptionId: string): T | undefined
     .get(subscriptionId) as { report_json: string } | undefined;
   return row ? (JSON.parse(row.report_json) as T) : undefined;
 }
+

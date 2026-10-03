@@ -8,20 +8,21 @@ vi.mock("../server/labs/compile.ts", async (importOriginal) => ({
 import { BLUEPRINTS, deployMinutesFor, getBlueprint, stagesFor } from "../server/labs/blueprints.ts";
 import { deployLab, labResourceTypes, prepareLab, readStageState, resumeIndex, type StageState } from "../server/labs/engine.ts";
 import { evaluateFeasibility, isPermitted, namespacesOf, normRegion, type AzureFacts, type FeasibilityInput } from "../server/labs/feasibility.ts";
-import { apimDependencies, runGate, type GateCtx } from "../server/labs/gates.ts";
+import { runGate, type GateCtx } from "../server/labs/gates.ts";
 import { getLab, openDb } from "../server/db.ts";
 import { ArmError, type ArmClient } from "../server/azure/arm.ts";
 import type { Probes } from "../server/validate.ts";
-import { config, SUB } from "./helpers.ts";
+import { config, FIXTURE_ID, registerFixtureBlueprint, SUB } from "./helpers.ts";
+
+registerFixtureBlueprint();
 
 const now = new Date("2026-10-01T18:00:00Z");
 
 // ---- Blueprints --------------------------------------------------------------------------------
 
-describe("phase 5 blueprints", () => {
-  it("registers the new scenarios with icons, meters and stages", () => {
-    for (const id of ["apim-classic", "apim-private-endpoint", "frontdoor-apim"]) {
-      const b = getBlueprint(id);
+describe("blueprint contract", () => {
+  it("every blueprint has defaults, meters and stages", () => {
+    for (const b of BLUEPRINTS) {
       const d = b.schema.parse({});
       expect(b.meters(d).length).toBeGreaterThan(0);
       expect(stagesFor(b, d).length).toBeGreaterThan(0);
@@ -38,49 +39,25 @@ describe("phase 5 blueprints", () => {
     }
   });
 
-  it("apim-classic: VNet only on Developer/Premium, units within tier limits", () => {
-    const b = getBlueprint("apim-classic");
-    const rules = (p: object) => b.rules!(b.schema.parse(p));
-    expect(rules({ sku: "Developer" })).toEqual([]);
-    expect(rules({ sku: "Premium", units: 3, networkMode: "Internal" })).toEqual([]);
-    expect(rules({ sku: "Standard", networkMode: "External" })[0]).toMatch(/Developer or Premium/);
-    expect(rules({ sku: "Developer", units: 2 })[0]).toMatch(/at most 1 unit per region/);
-    expect(rules({ sku: "Basic", units: 3 })[0]).toMatch(/at most 2 units/);
-  });
-
-  it("apim-classic: network stage only when injected; meters scale with units", () => {
-    const b = getBlueprint("apim-classic");
-    expect(stagesFor(b, b.schema.parse({})).map((s) => s.value)).toEqual([2]);
-    expect(stagesFor(b, b.schema.parse({ networkMode: "Internal" })).map((s) => s.value)).toEqual([1, 2]);
-    const m = b.meters(b.schema.parse({ sku: "Premium", units: 2, networkMode: "External" }));
-    expect(m[0]).toMatchObject({ skuName: "Premium", meterName: "Premium Unit", unitsPerHour: 2 });
-    expect(m).toHaveLength(2);
-    expect(deployMinutesFor(b, b.schema.parse({ sku: "Premium" }))[1]).toBeGreaterThan(deployMinutesFor(b, b.schema.parse({}))[1]);
-  });
-
-  it("apim-classic presets parse and pass the rules", () => {
-    const b = getBlueprint("apim-classic");
-    expect(b.presets?.length).toBeGreaterThanOrEqual(2);
+  it("rules block invalid combinations; presets pass them", () => {
+    const b = getBlueprint(FIXTURE_ID);
+    expect(b.rules!(b.schema.parse({ sku: "Basic", count: 3 }))[0]).toMatch(/at most 2/);
+    expect(b.rules!(b.schema.parse({ sku: "Standard", count: 3 }))).toEqual([]);
     for (const p of b.presets!) expect(b.rules!(b.schema.parse(p.params))).toEqual([]);
-  });
-
-  it("private endpoint: disabling public access adds a final stage", () => {
-    const b = getBlueprint("apim-private-endpoint");
-    expect(stagesFor(b, b.schema.parse({})).map((s) => s.value)).toEqual([1, 2, 3, 4]);
-    expect(stagesFor(b, b.schema.parse({ disablePublicAccess: "false" })).map((s) => s.value)).toEqual([1, 2, 3]);
+    expect(deployMinutesFor(b, b.schema.parse({}))).toEqual([3, 10]);
   });
 
   it("prepareLab rejects rule violations unless asked to skip them", () => {
-    const req = { blueprint: "apim-classic", region: "centralus", params: { sku: "Basic", networkMode: "Internal" }, ttlHours: 8 };
-    expect(() => prepareLab(config, req, now)).toThrow(/Developer or Premium/);
+    const req = { blueprint: FIXTURE_ID, region: "centralus", params: { sku: "Basic", count: 3 }, ttlHours: 8 };
+    expect(() => prepareLab(config, req, now)).toThrow(/at most 2/);
     expect(prepareLab(config, req, now, { skipRules: true }).params).toMatchObject({ sku: "Basic" });
   });
 
   it("resource types include steps and icon types", () => {
-    const b = getBlueprint("frontdoor-apim");
+    const b = getBlueprint(FIXTURE_ID);
     const types = labResourceTypes(b, b.schema.parse({}));
-    expect(types).toContain("Microsoft.Cdn/profiles");
-    expect(types).toContain("Microsoft.ApiManagement/service");
+    expect(types).toContain("Microsoft.Web/serverfarms");
+    expect(types).toContain("Microsoft.Web/sites");
   });
 });
 
@@ -93,15 +70,10 @@ const provider = (types: Record<string, string[]>, state = "Registered") => ({
 
 const facts = (over: Partial<AzureFacts> = {}): AzureFacts => ({
   providers: {
-    "Microsoft.ApiManagement": provider({ service: ["Central US", "East US"] }),
+    "Microsoft.Web": provider({ sites: ["Central US", "East US"], serverfarms: ["Central US", "East US"] }),
     "Microsoft.Network": provider({ virtualNetworks: ["Central US", "East US"], privateDnsZones: ["global"] }),
     "Microsoft.Resources": provider({ deploymentStacks: ["Central US", "East US"] }),
   },
-  apimSkus: [
-    { name: "Developer", locations: ["centralus"], capacity: { minimum: 1, maximum: 1 }, restrictions: [] },
-    { name: "Premium", locations: ["centralus"], capacity: { minimum: 1, maximum: 12 }, restrictions: [] },
-    { name: "PremiumV2", locations: ["eastus"], capacity: { minimum: 1, maximum: 30 }, restrictions: [] },
-  ],
   usages: [
     { name: "VirtualNetworks", current: 1, limit: 1000 },
     { name: "IPv4StandardSkuPublicIpAddresses", current: 9, limit: 10 },
@@ -116,8 +88,7 @@ const input = (over: Partial<FeasibilityInput> = {}): FeasibilityInput => ({
   enabledRegions: ["centralus", "eastus"],
   ttlHours: 8,
   hourly: 0.07,
-  resourceTypes: ["Microsoft.ApiManagement/service", "Microsoft.Network/virtualNetworks", "Microsoft.Network/privateDnsZones"],
-  apimSku: { sku: "Developer", units: 1 },
+  resourceTypes: ["Microsoft.Web/sites", "Microsoft.Network/virtualNetworks", "Microsoft.Network/privateDnsZones"],
   quotas: { VirtualNetworks: 1 },
   rules: [],
   deployMinutes: [30, 50],
@@ -128,21 +99,9 @@ const input = (over: Partial<FeasibilityInput> = {}): FeasibilityInput => ({
 const byId = (checks: ReturnType<typeof evaluateFeasibility>) => Object.fromEntries(checks.map((c) => [c.id, c]));
 
 describe("feasibility", () => {
-  it("passes a feasible Developer lab", () => {
+  it("passes a feasible lab", () => {
     const c = byId(evaluateFeasibility(input(), facts()));
-    for (const id of ["config", "providers", "region", "apim-sku", "quota", "rbac", "ttl", "budget"]) expect(c[id]?.status, id).toBe("pass");
-  });
-
-  it("blocks a tier not offered in the region and suggests where it is", () => {
-    const c = byId(evaluateFeasibility(input({ apimSku: { sku: "PremiumV2", units: 1 } }), facts()));
-    expect(c["apim-sku"]).toMatchObject({ status: "fail" });
-    expect(c["apim-sku"]!.detail).toMatch(/try eastus/);
-  });
-
-  it("blocks units above the region's capacity and restricted SKUs", () => {
-    expect(byId(evaluateFeasibility(input({ apimSku: { sku: "Developer", units: 2 } }), facts()))["apim-sku"]!.status).toBe("fail");
-    const restricted = facts({ apimSkus: [{ name: "Developer", locations: ["centralus"], restrictions: [{ type: "Location", values: ["centralus"], reasonCode: "NotAvailableForSubscription" }] }] });
-    expect(byId(evaluateFeasibility(input(), restricted))["apim-sku"]!.detail).toMatch(/NotAvailableForSubscription/);
+    for (const id of ["config", "providers", "region", "quota", "rbac", "ttl", "budget"]) expect(c[id]?.status, id).toBe("pass");
   });
 
   it("flags unregistered providers with a fix and region gaps", () => {
@@ -162,9 +121,9 @@ describe("feasibility", () => {
     const entries = [{ actions: ["Microsoft.Network/*", "Microsoft.Resources/*"], notActions: ["Microsoft.Network/azureFirewalls/write"] }];
     expect(isPermitted("Microsoft.Network/virtualNetworks/write", entries)).toBe(true);
     expect(isPermitted("microsoft.network/AZUREFIREWALLS/write", entries)).toBe(false);
-    expect(isPermitted("Microsoft.ApiManagement/service/write", entries)).toBe(false);
+    expect(isPermitted("Microsoft.Web/sites/write", entries)).toBe(false);
     const c = byId(evaluateFeasibility(input(), facts({ permissions: entries })));
-    expect(c.rbac!.detail).toMatch(/Microsoft.ApiManagement\/service\/write/);
+    expect(c.rbac!.detail).toMatch(/Microsoft.Web\/sites\/write/);
   });
 
   it("warns on budget pressure and high burn, fails a lifetime shorter than the deploy", () => {
@@ -175,7 +134,7 @@ describe("feasibility", () => {
   });
 
   it("reports configuration rules as a failing check", () => {
-    expect(byId(evaluateFeasibility(input({ rules: ["VNet injection needs Developer or Premium"] }), facts())).config!.status).toBe("fail");
+    expect(byId(evaluateFeasibility(input({ rules: ["Basic supports at most 2 instances"] }), facts())).config!.status).toBe("fail");
   });
 
   it("normalizes regions and namespaces", () => {
@@ -186,117 +145,44 @@ describe("feasibility", () => {
 
 // ---- Gates -------------------------------------------------------------------------------------
 
-function fakeProbes(routes: Record<string, unknown | ((n: number) => unknown)>, http: (url: string) => number = () => 200): Probes & { calls: string[] } {
-  const calls: string[] = [];
-  const count: Record<string, number> = {};
-  const lookup = (path: string) => {
-    calls.push(path);
-    const key = Object.keys(routes).find((k) => path.includes(k));
-    if (!key) throw new ArmError(`no route ${path}`, 404, "NotFound");
-    count[key] = (count[key] ?? 0) + 1;
-    const v = routes[key];
-    return typeof v === "function" ? (v as (n: number) => unknown)(count[key]!) : v;
-  };
+function fakeProbes(http: (url: string) => number = () => 200): Probes {
   return {
-    calls,
-    arm: { get: async (p: string) => lookup(p), lro: async (_m: string, p: string) => lookup(p) } as unknown as Probes["arm"],
+    arm: { get: async (p: string) => { throw new ArmError(`no route ${p}`, 404, "NotFound"); } } as unknown as Probes["arm"],
     http: async (url) => ({ status: http(url), ms: 5 }),
     dns: async () => [],
   };
 }
 
-const ctx = (x: Probes, outputs: Record<string, unknown> = {}, params: Record<string, unknown> = {}): GateCtx => ({ x, sub: SUB, labName: "lab-apim-ab12", params, outputs });
+const ctx = (x: Probes, outputs: Record<string, unknown> = {}, params: Record<string, unknown> = {}): GateCtx => ({ x, sub: SUB, labName: "lab-fxweb-ab12", params, outputs });
 const fast = { pollMs: 0, sleep: async () => undefined };
 
 describe("gates", () => {
-  it("apim-ready waits for activation, private IP and required dependencies", async () => {
-    const x = fakeProbes({
-      "/networkstatus": (n: number) => [{ networkStatus: { connectivityStatus: [{ name: "Storage", status: n < 2 ? "Initializing" : "Success" }, { name: "Smtp", status: "Failure", isOptional: true }] } }],
-      "/service/lab-apim-ab12-apim": (n: number) => ({
-        id: "/x/service/lab-apim-ab12-apim",
-        name: "lab-apim-ab12-apim",
-        properties: { provisioningState: n < 2 ? "Activating" : "Succeeded", virtualNetworkType: "Internal", privateIPAddresses: n < 3 ? [] : ["10.30.1.5"], gatewayUrl: "https://g" },
-      }),
-    });
+  it("http-ok polls until the url answers 200", async () => {
+    let n = 0;
+    const x = fakeProbes(() => (++n < 3 ? 503 : 200));
     const ticks: string[] = [];
-    const r = await runGate({ kind: "apim-ready", label: "APIM", timeoutMin: 5, blocking: true }, ctx(x), { ...fast, onTick: (t) => ticks.push(t.detail) });
-    expect(r.ok).toBe(true);
-    expect(r.outputs).toEqual({ privateIp: "10.30.1.5" });
-    expect(ticks[0]).toMatch(/Activating/);
-    expect(ticks).toContain("Waiting for a private IP");
-    expect(r.detail).toMatch(/optional failing: Smtp/);
-  });
-
-  it("apim-ready probes the public gateway and times out with the last reason", async () => {
-    const x = fakeProbes({ "/service/": { id: "s", name: "s", properties: { provisioningState: "Succeeded", virtualNetworkType: "None", gatewayUrl: "https://g" } } }, () => 503);
-    let t = 0;
-    const r = await runGate({ kind: "apim-ready", label: "APIM", timeoutMin: 1, blocking: false }, ctx(x), { ...fast, now: () => (t += 30_000) });
-    expect(r).toMatchObject({ ok: false, timedOut: true });
-    expect(r.detail).toMatch(/Timed out after 1 min — Gateway HTTP 503/);
-  });
-
-  it("apim-ready fails fast on a failed service", async () => {
-    const x = fakeProbes({ "/service/": { id: "s", name: "s", properties: { provisioningState: "Failed" } } });
-    const r = await runGate({ kind: "apim-ready", label: "APIM", timeoutMin: 10, blocking: true }, ctx(x), fast);
-    expect(r).toMatchObject({ ok: false, timedOut: false, polls: 1 });
-  });
-
-  it("firewall-ip returns the private IP", async () => {
-    const x = fakeProbes({
-      "/resources?": { value: [{ id: "/fw/hub-fw", name: "hub-fw" }] },
-      "/fw/hub-fw": { id: "/fw/hub-fw", name: "hub-fw", properties: { provisioningState: "Succeeded", ipConfigurations: [{ properties: { privateIPAddress: "10.0.1.4" } }] } },
-    });
-    const r = await runGate({ kind: "firewall-ip", label: "FW", timeoutMin: 5, blocking: true }, ctx(x), fast);
-    expect(r).toMatchObject({ ok: true, outputs: { firewallPrivateIp: "10.0.1.4" } });
-  });
-
-  it("peerings fail on Disconnected and pass when connected", async () => {
-    const vnet = (state: string) => ({ "/resources?": { value: [{ id: "/v/hub", name: "hub" }] }, "/v/hub": { id: "/v/hub", name: "hub", properties: { virtualNetworkPeerings: [{ name: "to-spoke", properties: { peeringState: state, peeringSyncLevel: "FullyInSync" } }] } } });
-    expect((await runGate({ kind: "peerings", label: "P", timeoutMin: 1, blocking: false }, ctx(fakeProbes(vnet("Disconnected"))), fast)).ok).toBe(false);
-    expect((await runGate({ kind: "peerings", label: "P", timeoutMin: 1, blocking: false }, ctx(fakeProbes(vnet("Connected"))), fast)).ok).toBe(true);
-  });
-
-  it("pe-approved checks approval, NIC IP and the privatelink A record", async () => {
-    const x = fakeProbes({
-      "/resources?": { value: [{ id: "/pe/apim-pe", name: "apim-pe" }] },
-      "/pe/apim-pe": { id: "/pe/apim-pe", name: "apim-pe", properties: { privateLinkServiceConnections: [{ properties: { privateLinkServiceConnectionState: { status: "Approved" } } }], networkInterfaces: [{ id: "/nic/1" }] } },
-      "/nic/1": { properties: { ipConfigurations: [{ properties: { privateIPAddress: "10.40.1.4" } }] } },
-      "/A/lab-apim-ab12-apim": (n: number) => ({ properties: { aRecords: n < 2 ? [] : [{ ipv4Address: "10.40.1.4" }] } }),
-    });
-    const r = await runGate({ kind: "pe-approved", label: "PE", timeoutMin: 5, blocking: true }, ctx(x), fast);
-    expect(r).toMatchObject({ ok: true, outputs: { privateEndpointIp: "10.40.1.4" }, polls: 2 });
-  });
-
-  it("afd-e2e polls the edge until 200 and reports the origin lock", async () => {
-    let edge = 0;
-    const x = fakeProbes({}, (url) => (url.startsWith("https://edge") ? (++edge < 3 ? 404 : 200) : 403));
-    const r = await runGate({ kind: "afd-e2e", label: "AFD", timeoutMin: 20, blocking: false }, ctx(x, { frontDoorUrl: "https://edge", gatewayUrl: "https://gw" }, { lockToFrontDoor: true }), fast);
-    expect(r.ok).toBe(true);
-    expect(r.polls).toBe(3);
-    expect(r.detail).toMatch(/blocked \(403\)/);
-  });
-
-  it("apim-public-off waits until public API calls are rejected", async () => {
-    let calls = 0;
-    const x = fakeProbes(
-      { "/service/": (n: number) => ({ id: "s", name: "s", properties: { provisioningState: n < 2 ? "Updating" : "Succeeded", publicNetworkAccess: "Disabled", gatewayUrl: "https://g" } }) },
-      (url) => (url.endsWith("/httpbin/get") && ++calls >= 2 ? 403 : 200),
-    );
-    const r = await runGate({ kind: "apim-public-off", label: "Closed", timeoutMin: 5, blocking: false }, ctx(x), fast);
+    const r = await runGate({ kind: "http-ok", label: "Site", timeoutMin: 5, blocking: true }, ctx(x, { url: "https://app" }), { ...fast, onTick: (t) => ticks.push(t.detail) });
     expect(r).toMatchObject({ ok: true, polls: 3 });
-    expect(r.detail).toMatch(/rejected \(403\)/);
+    expect(ticks[0]).toBe("https://app → HTTP 503");
+    expect(r.detail).toMatch(/→ 200 in 5 ms/);
   });
 
-  it("dependency summary ignores optional failures", () => {
-    expect(apimDependencies([{ networkStatus: { connectivityStatus: [{ name: "a", status: "Success" }, { name: "b", status: "Failure", isOptional: true }] } }]).ready).toBe(true);
-    expect(apimDependencies([{ networkStatus: { connectivityStatus: [{ name: "a", status: "Failure" }] } }]).ready).toBe(false);
-    expect(apimDependencies([]).ready).toBe(false);
+  it("http-ok times out with the last reason", async () => {
+    let t = 0;
+    const r = await runGate({ kind: "http-ok", label: "Site", timeoutMin: 1, blocking: false }, ctx(fakeProbes(() => 503), { url: "https://app" }), { ...fast, now: () => (t += 30_000) });
+    expect(r).toMatchObject({ ok: false, timedOut: true });
+    expect(r.detail).toMatch(/Timed out after 1 min — https:\/\/app → HTTP 503/);
+  });
+
+  it("http-ok fails fast without a url in the outputs", async () => {
+    const r = await runGate({ kind: "http-ok", label: "Site", timeoutMin: 10, blocking: true }, ctx(fakeProbes()), fast);
+    expect(r).toMatchObject({ ok: false, timedOut: false, polls: 1 });
   });
 });
 
 // ---- Staged engine -----------------------------------------------------------------------------
 
-function fakeEngineArm(opts: { failPutAtStage?: number; apim?: () => Record<string, unknown> }) {
+function fakeEngineArm(opts: { failPutAtStage?: number }) {
   const puts: number[] = [];
   const arm = {
     lro: async (method: string, url: string, body?: { properties: { parameters: Record<string, { value: unknown }> } }) => {
@@ -309,20 +195,18 @@ function fakeEngineArm(opts: { failPutAtStage?: number; apim?: () => Record<stri
       throw new Error(`unexpected ${method} ${url}`);
     },
     get: async (url: string) => {
-      if (url.includes("deploymentStacks")) return { properties: { provisioningState: "Succeeded", outputs: { apimName: { value: "lab-apim-ab12-apim" } }, error: { message: "boom" } } };
+      if (url.includes("deploymentStacks")) return { properties: { provisioningState: "Succeeded", outputs: { url: { value: "https://app" } }, error: { message: "boom" } } };
       if (url.includes("/deployments?")) return { value: [] };
-      if (url.includes("/networkstatus")) return [{ networkStatus: { connectivityStatus: [{ name: "Storage", status: "Success" }] } }];
-      if (url.includes("Microsoft.ApiManagement/service/")) return { id: "s", name: "s", properties: opts.apim?.() ?? { provisioningState: "Succeeded", virtualNetworkType: "Internal", privateIPAddresses: ["10.30.1.4"] } };
       throw new ArmError(url, 404, "NotFound");
     },
   } as unknown as ArmClient;
   return { arm, puts };
 }
 
-const probesFor = (arm: ArmClient): Probes => ({ arm, http: async () => ({ status: 200, ms: 1 }), dns: async () => [] });
+const probesFor = (arm: ArmClient, http: () => number = () => 200): Probes => ({ arm, http: async () => ({ status: http(), ms: 1 }), dns: async () => [] });
 
 describe("staged deployLab", () => {
-  const req = { blueprint: "apim-classic", region: "centralus", params: { networkMode: "Internal" }, ttlHours: 8, labName: "lab-apim-ab12" };
+  const req = { blueprint: FIXTURE_ID, region: "centralus", params: {}, ttlHours: 8, labName: "lab-fxweb-ab12" };
 
   it("applies stages in order, runs the gate and records outputs", async () => {
     const db = openDb(":memory:");
@@ -333,43 +217,42 @@ describe("staged deployLab", () => {
     expect(puts).toEqual([1, 2]);
     const row = getLab(db, p.labName)!;
     expect(row.status).toBe("ready");
-    expect(JSON.parse(row.outputs_json!)).toMatchObject({ apimName: "lab-apim-ab12-apim", privateIp: "10.30.1.4" });
+    expect(JSON.parse(row.outputs_json!)).toMatchObject({ url: "https://app" });
     expect(readStageState(row)).toMatchObject({ phase: "done", total: 2, warnings: [] });
   });
 
   it("a non-blocking gate failure leaves the lab ready with a warning", async () => {
     const db = openDb(":memory:");
-    const { arm } = fakeEngineArm({ apim: () => ({ provisioningState: "Activating", virtualNetworkType: "Internal" }) });
-    const p = prepareLab(config, req, now);
+    const { arm } = fakeEngineArm({});
+    const p = prepareLab(config, { ...req, params: { strictGate: false } }, now);
     let t = 0;
-    const msg = await deployLab(arm, db, p, 0.08, { probes: probesFor(arm), gateOpts: { ...fast, now: () => (t += 60_000) } });
+    const msg = await deployLab(arm, db, p, 0.08, { probes: probesFor(arm, () => 503), gateOpts: { ...fast, now: () => (t += 60_000 * 11) } });
     expect(msg).toMatch(/Ready with warnings: .*Timed out/);
     expect(readStageState(getLab(db, p.labName))!.warnings).toHaveLength(1);
   });
 
   it("a blocking gate failure fails the lab at that stage; resume restarts there", async () => {
     const db = openDb(":memory:");
-    let apimState = "Failed";
-    const { arm, puts } = fakeEngineArm({ apim: () => ({ provisioningState: apimState, virtualNetworkType: "None", publicNetworkAccess: "Disabled" }) });
-    const p = prepareLab(config, { ...req, blueprint: "apim-private-endpoint", params: {}, labName: "lab-apimpe-ab12" }, now);
-    await expect(deployLab(arm, db, p, 0.08, { probes: probesFor(arm), gateOpts: fast })).rejects.toThrow(/^Stage 2\/4 \(API Management Developer\): Gateway answers: Provisioning failed/);
+    const { arm, puts } = fakeEngineArm({});
+    const p = prepareLab(config, req, now);
+    const clock = () => { let t = 0; return () => (t += 60_000 * 11); };
+    await expect(deployLab(arm, db, p, 0.08, { probes: probesFor(arm, () => 503), gateOpts: { ...fast, now: clock() } })).rejects.toThrow(/^Stage 2\/2 \(Apps\): Site answers: Timed out/);
     expect(puts).toEqual([1, 2]);
     const failed = getLab(db, p.labName)!;
     expect(failed.status).toBe("failed");
     expect(readStageState(failed)).toMatchObject({ index: 1, phase: "failed" });
 
-    // Retry resumes at stage 2; the PE gate then needs resources this fake does not serve, so stop there.
-    apimState = "Succeeded";
+    // Retry resumes at stage 2 (the site now answers) instead of starting over.
     puts.length = 0;
-    await expect(deployLab(arm, db, p, 0.08, { resume: true, probes: probesFor(arm), gateOpts: { ...fast, now: (() => { let t = 0; return () => (t += 60_000); })() } })).rejects.toThrow(/Stage 3\/4/);
-    expect(puts).toEqual([2, 3]);
+    await expect(deployLab(arm, db, p, 0.08, { resume: true, probes: probesFor(arm), gateOpts: fast })).resolves.toBe("Ready");
+    expect(puts).toEqual([2]);
   });
 
   it("a failed stack update reports the stage", async () => {
     const db = openDb(":memory:");
     const { arm, puts } = fakeEngineArm({ failPutAtStage: 1 });
     const p = prepareLab(config, req, now);
-    await expect(deployLab(arm, db, p, 0.08, { probes: probesFor(arm), gateOpts: fast })).rejects.toThrow(/^Stage 1\/2 \(Network\): boom/);
+    await expect(deployLab(arm, db, p, 0.08, { probes: probesFor(arm), gateOpts: fast })).rejects.toThrow(/^Stage 1\/2 \(Plan\): boom/);
     expect(puts).toEqual([1]);
   });
 

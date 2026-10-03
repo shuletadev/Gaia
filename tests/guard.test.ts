@@ -52,7 +52,7 @@ describe("helpers", () => {
     expect(getTag(null, "owner")).toBeUndefined();
   });
   it("resolves per-blueprint TTLs", () => {
-    expect(ttlForBlueprint(config, "apim-internal-appgw")).toBe(12);
+    expect(ttlForBlueprint(config, "fixture-web")).toBe(12);
     expect(ttlForBlueprint(config, "unknown")).toBe(8);
   });
 });

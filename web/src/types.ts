@@ -51,7 +51,6 @@ export interface BlueprintInfo {
   custom?: { source: { resourceGroup: string; exportedAt: string }; warnings: string[]; module: string; decompileOk: boolean };
 }
 
-export type { ReproSuggestion } from "../../server/labs/repro.ts";
 export type { CustomMeta } from "../../server/labs/export.ts";
 
 export interface Catalog {
@@ -79,7 +78,6 @@ export interface Lab {
   etaMinutes?: number;
   exists: boolean;
   resourceGroupId: string;
-  caseId: string | null;
 }
 
 export interface LabsResponse {
@@ -125,3 +123,4 @@ export interface GroupSuggestions {
   groups: { name: string; subscriptionId: string }[];
   suggested: { name: string; reason: string }[];
 }
+

@@ -25,6 +25,20 @@ subscriptions.
 - **Lifecycle (later)**: confirm a student is official (payment made, benefits granted), then automate Teams
   registration, learning resources and class invites.
 
+## Decisions so far (2026-10-03)
+
+- **Old catalog removed.** The 10 APIM / App Gateway / Front Door / firewall / DNS-resolver blueprints, their gates and
+  hooks (APIM token, mTLS certificates), the APIM tier check and soft-delete purge were deleted. The generic engine
+  stays: stacks, stages, gates (`http-ok`), hooks (`vm-password`), preflight, pricing, timing, capacity memory.
+- **Personal-support features removed:** Repro from case (and the `caseId` tag), Teams nudges, weekly report, Windows
+  logon task. `npm run sweep` stays as a CLI.
+- **Admin-only first.** Students use only the Azure portal and guides; no student portal in v1.
+- **Hosting:** shared backend and always-on worker in Azure, in the business subscription.
+- **Tenants:** personal and business are in different Entra tenants, so workspaces need one tenant each (the config
+  currently allows a single tenant per instance).
+- **Pilot course:** AZ-900. **Language:** English admin UI, Spanish student guides.
+- **No Azure Pass codes** for MCTs, so student usage is paid by the business.
+
 ## What the current code gives us
 
 | Reusable as is | Needs to change |
@@ -152,8 +166,8 @@ and manual onboarding. That is phases 2 to 5 in thin form.
 
 ## Open questions
 
-1. Are the personal and business subscriptions in the same Entra tenant?
+1. ~~Same Entra tenant?~~ Answered: different tenants.
 2. Should students be guests in the business tenant, or have accounts the business creates?
-3. Is the UI, and the student-facing content, Spanish-first?
+3. ~~Spanish-first?~~ Answered: English UI, Spanish guides.
 4. Is there an existing Microsoft 365 / Teams tenant to use with Graph?
 5. Which payment methods are expected: SINPE Móvil, cards, or both?

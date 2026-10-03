@@ -12,7 +12,9 @@ import { azLogin, azStatus, parseAccountList, TENANT_INPUT, type AzRunner } from
 import { applyInPlace, blankConfig, diffSettings, isConfigured, parseSettings, SettingsError, suggestProtectedGroups } from "../server/settings.ts";
 import { registerSetupRoutes, SetupConflict } from "../server/setupRoutes.ts";
 import type { ArmClient } from "../server/azure/arm.ts";
-import { config, SUB, OTHER_SUB } from "./helpers.ts";
+import { config, FIXTURE_ID, registerFixtureBlueprint, SUB, OTHER_SUB } from "./helpers.ts";
+
+registerFixtureBlueprint();
 
 const TENANT = config.tenantId;
 const OTHER_TENANT = "44444444-4444-4444-4444-444444444444";
@@ -113,7 +115,7 @@ describe("Azure CLI discovery", () => {
 
 describe("labs per subscription", () => {
   const twoSubs = { ...structuredClone(config), subscriptions: [config.subscriptions[0]!, { id: OTHER_SUB, name: "Second" }] };
-  const req = { blueprint: "apim-v2-quickstart", region: "centralus", params: {}, ttlHours: 8 };
+  const req = { blueprint: FIXTURE_ID, region: "centralus", params: {}, ttlHours: 8 };
 
   it("deploys into the requested allow-listed subscription, defaulting to the first", () => {
     expect(prepareLab(twoSubs, req, now).subscriptionId).toBe(SUB);
@@ -123,7 +125,7 @@ describe("labs per subscription", () => {
   });
 
   it("retries in the lab's own subscription", () => {
-    const row = { name: "lab-apimqs-ab12", blueprint: "apim-v2-quickstart", region: "centralus", params_json: "{}", purpose: null, subscription_id: OTHER_SUB };
+    const row = { name: "lab-fxweb-ab12", blueprint: FIXTURE_ID, region: "centralus", params_json: "{}", purpose: null, subscription_id: OTHER_SUB };
     expect(prepareRetry(twoSubs, row, {}).subscriptionId).toBe(OTHER_SUB);
   });
 });

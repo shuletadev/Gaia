@@ -12,11 +12,11 @@ describe("capacity memory", () => {
   it("remembers a shortage for a day per blueprint and region", () => {
     const db = openDb(":memory:");
     const t = new Date("2026-10-02T23:21:00Z");
-    recordCapacityEvent(db, "apim-selfhosted", "Developer/containerapps", "centralus", "AKSCapacityHeavyUsage", t);
-    expect(recentCapacityEvent(db, "apim-selfhosted", "Developer/containerapps", "centralus", t.getTime() + 3_600_000)?.detail).toBe("AKSCapacityHeavyUsage");
-    expect(recentCapacityEvent(db, "apim-selfhosted", "Developer/containerapps", "eastus2", t.getTime())).toBeUndefined();
-    expect(recentCapacityEvent(db, "apim-selfhosted", "Developer/vm", "centralus", t.getTime())).toBeUndefined();
-    expect(recentCapacityEvent(db, "apim-selfhosted", "Developer/containerapps", "centralus", t.getTime() + 25 * 3_600_000)).toBeUndefined();
+    recordCapacityEvent(db, "fixture-web", "Standard/slots", "centralus", "AKSCapacityHeavyUsage", t);
+    expect(recentCapacityEvent(db, "fixture-web", "Standard/slots", "centralus", t.getTime() + 3_600_000)?.detail).toBe("AKSCapacityHeavyUsage");
+    expect(recentCapacityEvent(db, "fixture-web", "Standard/slots", "eastus2", t.getTime())).toBeUndefined();
+    expect(recentCapacityEvent(db, "fixture-web", "Standard/vm", "centralus", t.getTime())).toBeUndefined();
+    expect(recentCapacityEvent(db, "fixture-web", "Standard/slots", "centralus", t.getTime() + 25 * 3_600_000)).toBeUndefined();
   });
 
   it("strips SDK response dumps from messages", () => {
