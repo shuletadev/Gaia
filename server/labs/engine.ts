@@ -18,6 +18,7 @@ import { labDataDir } from "./hooks.ts";
 import { CAPACITY_ERROR, recentCapacityEvent, recordCapacityEvent, tidyError } from "./capacity.ts";
 import { rmSync } from "node:fs";
 import { PARAM_HOOKS, type ParamHook } from "./hooks.ts";
+import { deployContent, type CommandRunner } from "./content.ts";
 import type { HookKind } from "./blueprints.ts";
 
 const STACK_API = "2024-03-01";
@@ -310,6 +311,8 @@ export interface DeployOptions {
   gateOpts?: Parameters<typeof runGate>[2];
   /** Injected for tests; defaults to the real token/certificate hooks. */
   hooks?: Record<HookKind, ParamHook>;
+  /** Injected for tests; defaults to the SWA CLI. */
+  contentRunner?: CommandRunner;
 }
 
 /**
@@ -357,6 +360,7 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
   // Values computed by labctl between stages (tokens, certificates) that later stages take as parameters.
   const hookParams: Record<string, unknown> = {};
   const ranHooks = new Set<string>();
+  const ranContent = new Set<number>();
   const hooks = opts.hooks ?? PARAM_HOOKS;
   let i = start;
   try {
@@ -385,6 +389,18 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
       const stack = await arm.get<{ properties: { outputs?: Record<string, { value: unknown }> } }>(url);
       outputs = { ...outputs, ...Object.fromEntries(Object.entries(stack.properties.outputs ?? {}).map(([k, v]) => [k, v.value])) };
       updateLab(db, p.labName, { outputs_json: JSON.stringify(outputs) });
+
+      // Apps go on after their host exists and before the gate, which then checks the real thing is serving.
+      for (const [ci, c] of (p.blueprint.content ?? []).entries()) {
+        if (ranContent.has(ci) || (c.fromStage ?? 0) > (stage.value ?? Number.MAX_SAFE_INTEGER)) continue;
+        save(i, "deploying", { detail: `${stage.label} · publishing ${c.label}`, stageStartedAt });
+        try {
+          await deployContent(c, { arm, subscriptionId: p.subscriptionId, labName: p.labName, blueprintId: p.blueprint.id, outputs }, opts.contentRunner);
+        } catch (e) {
+          throw new StageFailure((e as Error).message);
+        }
+        ranContent.add(ci);
+      }
 
       if (stage.gate) {
         const gate = stage.gate;

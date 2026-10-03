@@ -157,7 +157,7 @@ be created from an existing resource group with **Save as blueprint** (below). E
 
 | Blueprint | What you get | ≈ $/hr | Deploy |
 |---|---|---|---|
-| `cr-farmacia-recibos` | **Farmacia Pura Vida**: a pharmacy's digital receipts. Static Web App (Free) front end, Cosmos DB serverless sales database, Storage account for receipt files (LRS or GRS) | ~0 (usage-based) | 3–8 min |
+| `cr-farmacia-recibos` | **Farmacia Pura Vida**: a pharmacy's digital receipts. Static Web App (Free) front end with a Spanish cashier app (catalog, cart, IVA, digital receipt, daily sales), Cosmos DB serverless sales database, Storage account for receipt files (LRS or GRS) | ~0 (usage-based) | 3–8 min |
 
 **Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the
 public [Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices).
@@ -185,6 +185,14 @@ signal before the next stage starts. Today there is one gate kind, `http-ok` (an
 added in `server/labs/gates.ts` as blueprints need them. Blocking gates fail the lab with the stage and reason;
 **Resume k/N** continues from that stage instead of starting over. Gates on the last stage are non-blocking: the lab
 is Ready with a readiness warning.
+
+**App content** — a blueprint can ship an app (`content` in `server/labs/blueprints.ts`, files in
+`blueprints/<id>/app/`). After the stack update and before the stage's gate, labctl asks Azure for the Static Web
+App's deployment token (`listSecrets`) and publishes the folder with Microsoft's SWA CLI
+(`server/labs/content.ts`). The token goes to the CLI through an environment variable and is scrubbed from every
+error. The CLI is not an install-time dependency (it is ~290 MB with a native module): `npx` fetches a pinned
+version on first use, so the first publish needs internet access and takes a minute longer. A failed publish fails
+the stage; **Retry** re-applies the stage and publishes again.
 
 **Generated values** — a stage can need a value only labctl can produce. Blueprints declare *parameter hooks*
 (`server/labs/hooks.ts`; today `vm-password`, a random admin password). Pre-launch validation uses placeholders.

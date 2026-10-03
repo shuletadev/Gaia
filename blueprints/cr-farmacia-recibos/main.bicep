@@ -32,5 +32,6 @@ module lab 'lab.bicep' = {
 }
 
 output url string = lab.outputs.url
+output staticSiteName string = lab.outputs.staticSiteName
 output storageAccount string = lab.outputs.storageAccount
 output cosmosEndpoint string = lab.outputs.cosmosEndpoint

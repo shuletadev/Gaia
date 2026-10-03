@@ -41,8 +41,9 @@ subscriptions.
 
 ## Showcase catalog progress
 
-- [x] `cr-farmacia-recibos` (pharmacy digital receipts): infrastructure only. The Static Web App shows Azure's placeholder
-  page; deploying a sample app (needs a content hook using the Static Web Apps deployment token) is the next step.
+- [x] `cr-farmacia-recibos` (pharmacy digital receipts): infrastructure plus a Spanish cashier app deployed by the new
+  content step (SWA deployment token + pinned SWA CLI). The app keeps sales in the browser; saving them to the lab's
+  Cosmos DB and Blob Storage (a Static Web Apps managed API) is the next step.
 - [ ] Pulpería inventory
 - [ ] Small-business website
 

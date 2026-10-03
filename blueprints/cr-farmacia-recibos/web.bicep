@@ -11,4 +11,5 @@ resource site 'Microsoft.Web/staticSites@2023-12-01' = {
   properties: {}
 }
 
+output name string = site.name
 output url string = 'https://${site.properties.defaultHostname}'

@@ -35,6 +35,18 @@ export interface PriceMeter {
   fixedHourly?: number;
 }
 
+/** An app deployed to a service the template created, after the stack update and before the stage's gate. */
+export interface ContentDef {
+  kind: "static-web-app";
+  label: string;
+  /** Folder under blueprints/<id>/ holding the files (must contain index.html). */
+  dir: string;
+  /** Stack output holding the Static Web App's name. */
+  siteOutput: string;
+  /** Runs at the first stage whose value is at least this (default: the first stage). */
+  fromStage?: number;
+}
+
 export interface Blueprint<P extends Record<string, unknown> = Record<string, unknown>> {
   id: string;
   title: string;
@@ -58,6 +70,8 @@ export interface Blueprint<P extends Record<string, unknown> = Record<string, un
   extraTypes?: string[] | ((p: P) => string[]);
   /** VM sizes the lab creates (checked for regional availability and vCPU quota). */
   vmSizes?: (p: P) => string[];
+  /** Apps to deploy once the template has created their host (see ContentDef). */
+  content?: ContentDef[];
   /** Resource types that are not offered in every region (e.g. Static Web Apps); the template picks their location, so the region check skips them. */
   regionFree?: string[];
   /** Showcase context for classes: the business story, what students learn and which exams it supports. */
@@ -163,6 +177,7 @@ export const BLUEPRINTS: Blueprint<any>[] = [
     notes: ["Cosmos DB request units and storage used", "Blob storage capacity and operations", "GRS adds geo-replication charges"],
     armParams: (p: z.infer<typeof farmaciaSchema>) => ({ redundancy: p.redundancy }),
     regionFree: ["Microsoft.Web/staticSites"],
+    content: [{ kind: "static-web-app", label: "Pharmacy cashier app", dir: "app", siteOutput: "staticSiteName" }],
     timingKey: (p: z.infer<typeof farmaciaSchema>) => p.redundancy,
     stages: () => [{ label: "Deploy", gate: { kind: "http-ok", label: "Front end answers", timeoutMin: 10, blocking: false } }],
     scenario: {

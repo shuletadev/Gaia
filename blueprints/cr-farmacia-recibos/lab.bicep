@@ -23,5 +23,6 @@ module web 'web.bicep' = {
 }
 
 output url string = web.outputs.url
+output staticSiteName string = web.outputs.name
 output storageAccount string = storage.outputs.name
 output cosmosEndpoint string = cosmos.outputs.endpoint
