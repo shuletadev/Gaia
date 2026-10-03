@@ -1,0 +1,47 @@
+{
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "subscriptions": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "My lab subscription"
+    }
+  ],
+  "excludedResourceGroups": [
+    "NetworkWatcherRG"
+  ],
+  "budget": {
+    "monthlyUsd": 600,
+    "alertThresholds": [
+      0.5,
+      0.8,
+      1.0
+    ]
+  },
+  "ttlHours": {
+    "default": 8,
+    "byBlueprint": {
+      "apim-internal-appgw": 12,
+      "apim-v2-quickstart": 8,
+      "hub-spoke-firewall": 8
+    }
+  },
+  "owner": "you@example.com",
+  "server": {
+    "port": 4870
+  },
+  "labs": {
+    "defaultRegion": "centralus",
+    "regions": [
+      "centralus",
+      "eastus",
+      "eastus2",
+      "westus2",
+      "westus3",
+      "northeurope",
+      "westeurope",
+      "canadacentral"
+    ],
+    "sweepIntervalMinutes": 15,
+    "sweepEnabled": true
+  }
+}

@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Theme is chosen by the app (dark by default), not by the OS: dark: applies under html.dark. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+  --color-signal: #ff6a3d;
+  --color-calm: #3dd6b0;
+}
+
+html {
+  @apply bg-stone-100 text-stone-900 dark:bg-[#0c0d10] dark:text-stone-100 antialiased;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+.grain {
+  background-image: radial-gradient(circle at 20% -10%, rgb(255 106 61 / 0.14), transparent 45%),
+    radial-gradient(circle at 110% 30%, rgb(61 214 176 / 0.1), transparent 40%);
+}

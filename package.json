@@ -1,0 +1,48 @@
+{
+  "name": "azure-lab-control",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local control room for Azure lab environments, cost and orphan audits",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c cyan,magenta \"tsx watch server/index.ts\" \"vite\"",
+    "build": "vite build",
+    "start": "vite build && tsx server/index.ts",
+    "audit": "tsx scripts/baseline-audit.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "icons": "tsx scripts/fetch-icons.ts",
+    "package": "tsx scripts/package.ts",
+    "sweep": "tsx scripts/sweep.ts",
+    "nudge": "tsx scripts/nudge.ts",
+    "weekly": "tsx scripts/weekly-report.ts",
+    "task": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/task.ps1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.2",
+    "@types/node-forge": "^1.3.14",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.13.3",
+    "@fastify/static": "^10.1.4",
+    "elkjs": "^0.12.0",
+    "fastify": "^5.12.5",
+    "node-forge": "^1.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
+  }
+}

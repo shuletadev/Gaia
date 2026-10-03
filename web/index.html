@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Gaia</title>
+    <link rel="icon" type="image/svg+xml" href="/gaia.svg" />
+    <meta name="theme-color" content="#0c0d10" />
+    <script>
+      // Apply the saved theme before first paint (dark unless the user picked light).
+      try {
+        if (localStorage.getItem("labctl-theme") === "light") document.documentElement.classList.remove("dark");
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
