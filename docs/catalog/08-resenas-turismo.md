@@ -2,7 +2,7 @@
 
 Blueprint `cr-resenas-turismo` · code `cresen` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
-**Exam mapping:** AI-900 (natural language processing workloads: sentiment, key phrases, language detection, translation, entity recognition).
+**Exam mapping:** AI-901 (common text analysis techniques: keyword extraction, entity detection, sentiment analysis, summarization; responsible AI). *Was AI-900, retired 30 June 2026.*
 
 ## Scenario
 A hotel group in La Fortuna gets hundreds of reviews in Spanish and English on several sites. The manager reads a few

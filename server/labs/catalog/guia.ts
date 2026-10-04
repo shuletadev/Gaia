@@ -86,6 +86,6 @@ export const guia: Blueprint<any> = {
       "Ground the answers on documents and compare them with answers from the model alone",
       "See content filtering and refusals, and discuss privacy and prompt injection",
     ],
-    exams: ["AI-900: generative AI workloads (large language models, prompts, copilots, retrieval-augmented answers)", "AI-900: responsible AI (content filtering, transparency, privacy)"],
+    exams: ["AI-901: how generative AI models work, model deployment options and configuration parameters, effective system and user prompts", "AI-901: principles of responsible AI (reliability and safety, transparency, privacy)"],
   },
 };

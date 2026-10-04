@@ -47,6 +47,6 @@ export const facturas: Blueprint<any> = {
       "Explain why a person still reviews low-confidence fields",
       "Name the responsible-AI points for financial documents: privacy, errors and human oversight",
     ],
-    exams: ["AI-900: computer vision workloads (OCR, document and receipt analysis)", "AI-900: responsible AI considerations"],
+    exams: ["AI-901: identify AI workloads and information extraction techniques (OCR, document and receipt analysis)", "AI-901: principles of responsible AI (privacy, reliability, accountability)"],
   },
 };

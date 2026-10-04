@@ -71,6 +71,6 @@ export const cafe: Blueprint<any> = {
       "Train a forecasting or regression model without code and read its error metrics",
       "Judge whether a prediction is trustworthy and name what could make it wrong, such as a new competitor or a promotion",
     ],
-    exams: ["AI-900: fundamental principles of machine learning on Azure (regression, classification, clustering, training and validation)", "AI-900: responsible AI considerations"],
+    exams: ["AI-900 (retired 30 June 2026): machine learning principles (regression, classification, clustering, training and validation). AI-901 no longer tests them; kept as background", "AI-901: principles of responsible AI, with a trained model as the example (fairness, reliability, transparency)"],
   },
 };

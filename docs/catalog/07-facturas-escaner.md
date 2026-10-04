@@ -2,7 +2,7 @@
 
 Blueprint `cr-facturas-escaner` · code `cfact` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
-**Exam mapping:** AI-900 (computer vision workloads: OCR, document/receipt analysis, image analysis) · AI-900 (responsible AI considerations).
+**Exam mapping:** AI-901 (identify AI workloads and extraction techniques: OCR, document and receipt analysis; principles of responsible AI). *Was AI-900, retired 30 June 2026.* AI-901's hands-on extraction skills use Content Understanding: see card 24.
 
 ## Scenario
 An accountant in Escazú receives supplier invoices as phone photos and PDFs and retypes them into a spreadsheet every

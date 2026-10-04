@@ -2,7 +2,7 @@
 
 Blueprint `cr-guia-turistico` · code `cguia` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 2 · **Blocked on access and cost review**
 
-**Exam mapping:** AI-900 (generative AI workloads: large language models, prompts, copilots, retrieval-augmented answers, responsible AI and content filtering).
+**Exam mapping:** AI-901 (how generative AI models work, model deployment options and configuration parameters, effective system and user prompts, responsible AI). *Was AI-900, retired 30 June 2026.* The agent and SDK skills of AI-901 are in card 22.
 
 ## Scenario
 A tourism office in Monteverde wants a chat assistant that answers visitors' questions about trails, schedules and

@@ -46,6 +46,6 @@ export const resenas: Blueprint<any> = {
       "Read results critically: sarcasm, slang and mixed-sentiment reviews",
       "Explain the difference between sentiment for a whole review and for each sentence",
     ],
-    exams: ["AI-900: natural language processing workloads (sentiment, key phrases, language detection, translation)", "AI-900: responsible AI considerations"],
+    exams: ["AI-901: common text analysis techniques (keyword extraction, entity detection, sentiment analysis, summarization)", "AI-901: principles of responsible AI (fairness, inclusiveness, transparency)"],
   },
 };

@@ -54,6 +54,11 @@ export const ICON_SLUGS: Record<string, string> = {
   "microsoft.containerservice/managedclusters": "Kubernetes-Services",
   "microsoft.app/containerapps": "Worker-Container-App",
   "microsoft.app/managedenvironments": "Container-Apps-Environments",
+  "microsoft.containerregistry/registries": "Container-Registries",
+  "microsoft.containerinstance/containergroups": "Container-Instances",
+  // Backup
+  "microsoft.recoveryservices/vaults": "Recovery-Services-Vaults",
+  "microsoft.dataprotection/backupvaults": "Backup-Vault",
   // Data / security / identity
   "microsoft.storage/storageaccounts": "Storage-Accounts",
   "microsoft.keyvault/vaults": "Key-Vaults",
@@ -81,6 +86,7 @@ export const ICON_SLUGS: Record<string, string> = {
   "microsoft.insights/activitylogalerts": "Alerts",
   "microsoft.insights/metricalerts": "Alerts",
   "microsoft.insights/scheduledqueryrules": "Alerts",
+  "microsoft.alertsmanagement/actionrules": "Alerts",
   "microsoft.insights/autoscalesettings": "Monitor",
   "microsoft.insights/datacollectionrules": "Data-Collection-Rules",
   "microsoft.insights/workbooks": "Workbooks",

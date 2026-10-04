@@ -27,6 +27,8 @@ const LOCK_API = "2016-09-01";
 const ML_API = "2024-04-01";
 const COG_API = "2024-10-01";
 const KV_API = "2023-07-01";
+const BACKUP_API = "2024-10-01";
+const VAULT_CONFIG_API = "2023-02-01";
 
 export interface LabRequest {
   blueprint: string;
@@ -500,7 +502,9 @@ export async function labProgress(arm: ArmClient, sub: string, labName: string, 
 }
 
 /**
- * Removes the stack without deleting resources (detach), then deletes the resource group.\r\n *\r\n * Deleting through the stack removes resources one by one and can retry for a long time on child\r\n * resources; a resource-group delete removes everything as a whole and lets Azure order it.
+ * Removes the stack without deleting resources (detach), then deletes the resource group.
+ *
+ * Deleting through the stack removes resources one by one and can retry for a long time on child\r\n * resources; a resource-group delete removes everything as a whole and lets Azure order it.
  */
 export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: string, opts: { canTouch?: (id: string) => string | undefined } = {}): Promise<string> {
   updateLab(db, labName, { status: "destroying" });
@@ -543,6 +547,12 @@ export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: s
         return [] as string[];
       });
       if (workspaces.length) notes.push(`purged ${workspaces.join(", ")}`);
+      // A Recovery Services vault that still holds backup items refuses to be deleted with its group.
+      const backups = await purgeBackupItems(arm, sub, labName).catch((e: Error) => {
+        notes.push(e.message);
+        return [] as string[];
+      });
+      if (backups.length) notes.push(`stopped backup of ${backups.join(", ")}`);
       await arm.lro("DELETE", rg, undefined, { timeoutMs: 2 * 60 * 60_000, pollMs: 15_000 });
       notes.push("group deleted");
     }
@@ -607,6 +617,32 @@ export async function purgeMlWorkspaces(arm: Pick<ArmClient, "get" | "lro">, sub
   }
   for (const w of list.value) await arm.lro("DELETE", `${w.id}?api-version=${ML_API}&forceToPurge=true`, undefined, { timeoutMs: 30 * 60_000, pollMs: 10_000 });
   return list.value.map((w) => w.name);
+}
+
+/**
+ * Stops protection and deletes the recovery points of everything backed up in the lab's Recovery Services vaults,
+ * so the group delete can remove the vault. Soft delete is switched off first: otherwise the deleted backups stay
+ * for 14 days and the vault cannot go. Only vaults inside the lab's group are touched.
+ */
+export async function purgeBackupItems(arm: Pick<ArmClient, "get" | "raw" | "lro">, sub: string, labName: string): Promise<string[]> {
+  let vaults: { value: { id: string; name: string }[] };
+  try {
+    vaults = await arm.get(`${rgIdFor(sub, labName)}/providers/Microsoft.RecoveryServices/vaults?api-version=${BACKUP_API}`);
+  } catch (e) {
+    // Provider not registered or group already gone: nothing was backed up.
+    if (e instanceof ArmError && [400, 404, 409].includes(e.status)) return [];
+    throw e;
+  }
+  const stopped: string[] = [];
+  for (const v of vaults.value) {
+    await arm.raw("PATCH", `${v.id}/backupconfig/vaultconfig?api-version=${VAULT_CONFIG_API}`, { properties: { softDeleteFeatureState: "Disabled", enhancedSecurityState: "Disabled" } });
+    const items = await arm.get<{ value: { id: string; name: string }[] }>(`${v.id}/backupProtectedItems?api-version=${BACKUP_API}`);
+    for (const item of items.value) {
+      await arm.lro("DELETE", `${item.id}?api-version=${BACKUP_API}`, undefined, { timeoutMs: 30 * 60_000, pollMs: 10_000 });
+      stopped.push(item.name);
+    }
+  }
+  return stopped;
 }
 
 /**

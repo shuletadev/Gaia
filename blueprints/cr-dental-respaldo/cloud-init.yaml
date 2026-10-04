@@ -1,0 +1,13 @@
+#cloud-config
+# A data folder with example files (a fictional clinic: no real patients, names or numbers).
+write_files:
+  - path: /srv/expedientes/citas-de-hoy.csv
+    content: |
+      hora,paciente,motivo
+      08:00,Paciente de ejemplo 1,Limpieza
+      09:30,Paciente de ejemplo 2,Revision
+      11:00,Paciente de ejemplo 3,Ortodoncia
+  - path: /srv/expedientes/LEEME.txt
+    content: |
+      Clinica Dental Sonrisa (ficticia). Datos de ejemplo para la clase de respaldo y recuperacion.
+      Borre un archivo de esta carpeta, y recupérelo desde un punto de restauración.

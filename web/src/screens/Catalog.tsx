@@ -8,6 +8,12 @@ import { IconTrash } from "../components/Icons.tsx";
 import { relTime, typeLabel, usd } from "../format.ts";
 import type { Alternative, AlternativesResult, BlueprintInfo, Catalog as CatalogData, Estimate, FeasibilityCheck, Job, LabEstimate, ValidationResult } from "../types.ts";
 
+/** Distinct exam codes (AZ-900, AI-901, ...) from the lines of a lab's scenario.exams, in order of first mention. */
+function examCodes(b: BlueprintInfo): string[] {
+  const codes = (b.scenario?.exams ?? []).map((e) => /^[A-Z]{2,3}-\d{3}/.exec(e)?.[0]).filter((c): c is string => Boolean(c));
+  return [...new Set(codes)];
+}
+
 export function Catalog({ onLaunched }: { onLaunched: () => void }) {
   const { notify } = useStore();
   const [catalog, setCatalog] = useState<CatalogData>();
@@ -78,6 +84,11 @@ export function Catalog({ onLaunched }: { onLaunched: () => void }) {
             </div>
             <h3 className="mt-6 text-xl font-semibold tracking-tight">{b.title}</h3>
             <p className="mt-1 text-sm text-stone-500">{b.tagline}</p>
+            {examCodes(b).length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Certifications">
+                {examCodes(b).map((c) => <Chip key={c} tone="plain">{c}</Chip>)}
+              </div>
+            )}
             <div className="mt-6 flex items-end justify-between">
               <div>
                 <div className="font-mono text-2xl tabular-nums">{rates[b.id] === undefined ? "…" : usd(rates[b.id])}</div>

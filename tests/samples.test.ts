@@ -59,7 +59,7 @@ describe("png", () => {
 
 describe("generators", () => {
   it("are registered for every sample the catalog uses, and reject unknown names", () => {
-    expect(Object.keys(GENERATORS).sort()).toEqual(["coffee-demand", "farm-archive", "invoices-receipts", "pharmacy-sales", "tourism-brochures", "tourist-reviews"]);
+    expect(Object.keys(GENERATORS).sort()).toEqual(["coffee-demand", "dairy-docs", "farm-archive", "invoices-receipts", "municipal-report", "pharmacy-sales", "tourism-brochures", "tourist-reviews"]);
     expect(() => generateSamples("nope")).toThrow(/Unknown sample generator/);
   });
 
@@ -117,6 +117,21 @@ describe("generators", () => {
     const files = generateSamples("tourism-brochures");
     expect(files.map((f) => f.path).sort()).toEqual(["folletos/horarios.pdf", "folletos/precios.pdf", "folletos/preguntas.pdf", "folletos/seguridad.pdf", "folletos/senderos.pdf"]);
     for (const f of files) expect(f.data.toString("latin1")).toContain("ficticia");
+  });
+
+  it("dairy documents: a month of milk collections for four farms and two example contracts", () => {
+    const files = generateSamples("dairy-docs");
+    const rows = lines(files.find((f) => f.path === "acopio/acopio-2025-03.csv")!.data);
+    expect(rows[0]).toBe("fecha,finca,litros,grasa_pct,temperatura_c");
+    expect(rows).toHaveLength(1 + 31 * 4);
+    expect(files.filter((f) => f.path.startsWith("contratos/") && f.data.toString("latin1").includes("EJEMPLO"))).toHaveLength(2);
+  });
+
+  it("municipal report: a text report and a consumption table for three sectors", () => {
+    const files = generateSamples("municipal-report");
+    expect(files.map((f) => f.path).sort()).toEqual(["informes/consumo.csv", "informes/informe-acueducto.txt"]);
+    expect(lines(files.find((f) => f.path.endsWith("consumo.csv"))!.data)).toHaveLength(1 + 3 * 6);
+    expect(files.find((f) => f.path.endsWith(".txt"))!.data.toString("utf8")).toContain("ficticia");
   });
 
   it("pharmacy sales: consistent rows, a year or three, and a rainy-season effect", () => {

@@ -313,7 +313,40 @@ function coffeeDemand(params: Record<string, unknown>): SampleFile[] {
   return [{ path: "datos/demanda-cafe.csv", data: text(rows.join("\n") + "\n") }];
 }
 
+// ---- Lab 17: dairy cooperative documents --------------------------------------------------------
+
+function dairyDocs(): SampleFile[] {
+  const r = rng(67);
+  const farms = ["Finca La Esperanza", "Finca Los Cipreses", "Finca El Mirador", "Finca Río Frío"];
+  const rows = ["fecha,finca,litros,grasa_pct,temperatura_c"];
+  for (let day = 0; day < 31; day++) {
+    for (const farm of farms) rows.push([`2025-03-${String(day + 1).padStart(2, "0")}`, `"${farm}"`, Math.round(380 + r() * 220), (3.4 + r() * 0.9).toFixed(1), (3 + r() * 2).toFixed(1)].join(","));
+  }
+  const contract = (n: number, farm: string) =>
+    pdf(["Cooperativa Lechera Zona Norte (ficticia)", `Contrato de acopio de leche, ejemplo ${n}`, "", `Productor: ${farm}`, "Entrega diaria antes de las 7:00 a. m.", "Precio base por litro: 285 colones, más bono por calidad.", "", "DOCUMENTO DE EJEMPLO PARA CLASE, SIN VALOR LEGAL."], { size: 12 });
+  return [
+    { path: "acopio/acopio-2025-03.csv", data: text(rows.join("\n") + "\n") },
+    { path: "contratos/contrato-1.pdf", data: contract(1, farms[0]!) },
+    { path: "contratos/contrato-2.pdf", data: contract(2, farms[1]!) },
+    { path: "LEEME.txt", data: text("Documentos de ejemplo de la cooperativa lechera (datos sintéticos para clase).\n") },
+  ];
+}
+
+// ---- Lab 20: municipal water report -------------------------------------------------------------
+
+function municipalReport(): SampleFile[] {
+  const r = rng(71);
+  const rows = ["sector,mes,consumo_m3,fugas_reportadas"];
+  for (const sector of ["Centro", "San Rafael", "La Pradera"]) for (let m = 1; m <= 6; m++) rows.push(`${sector},2025-${String(m).padStart(2, "0")},${Math.round(1800 + r() * 900)},${Math.floor(r() * 6)}`);
+  return [
+    { path: "informes/informe-acueducto.txt", data: text("Municipalidad de Grecia (ficticia)\nInforme interno del acueducto, primer semestre de 2025.\n\nEste documento es de ejemplo. Si usted puede leerlo desde la aplicación, es porque su identidad tiene un rol de lectura sobre este contenedor.\n") },
+    { path: "informes/consumo.csv", data: text(rows.join("\n") + "\n") },
+  ];
+}
+
 export const GENERATORS: Record<string, Generator> = {
+  "dairy-docs": dairyDocs,
+  "municipal-report": municipalReport,
   "invoices-receipts": (p) => (p.sampleSet === "invoices" ? invoices() : [...invoices(), ...receipts()]),
   "tourist-reviews": reviews,
   "farm-archive": farmArchive,

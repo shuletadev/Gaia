@@ -46,7 +46,11 @@ subscriptions.
 
 ## Showcase catalog progress (instructor reference labs)
 
-**All 14 labs in the catalog are built** (specs in catalog/, one file per lab under server/labs/catalog/), with 295+ unit tests and all Bicep compiling. **None has been deployed to Azure yet.** Next: a sandbox test pass, then student-mode policy packs and Spanish guides.
+**22 labs in the catalog are built** (specs in catalog/, one file per lab under server/labs/catalog/), plus two instructor guides (identity, infrastructure as code), with 320+ unit tests and all Bicep compiling. **None has been deployed to Azure yet.** Next: a sandbox test pass, then student-mode policy packs and Spanish guides.
+
+**Scope (2026-10-04): the catalog is being built for AZ-900, AI-901 and AZ-104 only.** AI-900 retired on 30 June 2026; AI-901 replaced it
+(Foundry-based). Batch 4 (labs 16 to 21: monitoring, storage administration, containers, backup, RBAC, infrastructure as code) and batch 5 (labs 22 to 24:
+Foundry agent, voice and vision, Content Understanding) were added for the gaps. Known gaps: VM scale sets, Bastion, private endpoints and user-defined routes (AZ-104).
 
 Spec cards for 15 labs (one per exam section at least) live in [docs/catalog/](catalog/README.md): review and prune
 there before anything else is built. Build order: batch 1 (one per section) 04, 03, 05, 02, 07, 08, 12; batch 2 10,

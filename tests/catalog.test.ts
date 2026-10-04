@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -28,11 +29,13 @@ interface Template {
 const allResources = (rs: Res[] = []): Res[] => rs.flatMap((r) => [r, ...allResources(r.properties?.template?.resources)]);
 
 describe("the catalog as a whole", () => {
-  it("has the 14 labs, each with a unique id and code", () => {
+  it("has the 22 labs, each with a unique id and code", () => {
     expect(BLUEPRINTS.map((b) => b.id).sort()).toEqual(
       [
         "cr-cafe-demanda", "cr-clinica-seguridad", "cr-cooperativa-gobierno", "cr-facturas-escaner", "cr-farmacia-recibos", "cr-fincas-archivo", "cr-guia-turistico",
         "cr-pulperia-inventario", "cr-resenas-turismo", "cr-soda-sitio-web", "cr-sucursales-red", "cr-taller-servidores", "cr-tour-escala", "cr-ventas-reporte",
+        "cr-ferreteria-monitoreo", "cr-lecheria-almacenamiento", "cr-repartos-contenedores", "cr-dental-respaldo", "cr-municipio-accesos", "cr-cooperativa-agente",
+        "cr-feria-voz-vision", "cr-expedientes-contenido",
       ].sort(),
     );
     expect(new Set(BLUEPRINTS.map((b) => b.code)).size).toBe(BLUEPRINTS.length);
@@ -40,7 +43,17 @@ describe("the catalog as a whole", () => {
 
   it("covers every exam in the plan with at least one lab", () => {
     const exams = BLUEPRINTS.flatMap((b) => b.scenario!.exams).join(" | ");
-    for (const code of ["AZ-900", "AI-900", "DP-900", "SC-900", "AZ-104"]) expect(exams, code).toContain(code);
+    for (const code of ["AZ-900", "AI-901", "DP-900", "SC-900", "AZ-104"]) expect(exams, code).toContain(code);
+  });
+
+  it("covers every AZ-104 domain and every AI-901 domain with at least one lab", () => {
+    const by = (code: string, topic: RegExp) => BLUEPRINTS.filter((b) => b.scenario!.exams.some((e) => e.startsWith(code) && topic.test(e))).map((b) => b.id);
+    for (const topic of [/storage/i, /container|compute|virtual machines/i, /network/i, /monitor/i, /backup/i, /access to Azure resources|roles/i]) expect(by("AZ-104", topic).length, `AZ-104 ${topic}`).toBeGreaterThan(0);
+    for (const topic of [/generative|prompts|model/i, /speech/i, /vision|image/i, /extraction|extract/i, /responsible AI/i]) expect(by("AI-901", topic).length, `AI-901 ${topic}`).toBeGreaterThan(0);
+  });
+
+  it("every exam line starts with a known exam code, so the catalog page can tag each lab", () => {
+    for (const b of BLUEPRINTS) for (const e of b.scenario!.exams) expect(e, `${b.id}: ${e}`).toMatch(/^(AZ-900|AZ-104|AI-901|AI-900|DP-900|SC-900)\b/);
   });
 
   it("every preset and alternative is valid for its blueprint and passes its own rules", () => {
@@ -196,6 +209,65 @@ describe("the Node servers shipped with the labs", () => {
     expect(script).not.toMatch(/\bvar\s+(status|name|top|parent|self|length|event)\b|,\s*(status|name|top|parent|self|length|event)\s*=/);
     expect(() => new Function(script)).not.toThrow();
   });
+
+  it("ferreteria: the shop answers normal orders, fails on purpose on /error, and serves the test page", async () => {
+    const page = readFileSync(resolve(BLUEPRINT_DIR, "cr-ferreteria-monitoreo", "page.html"), "utf8");
+    await withServer(embed("cr-ferreteria-monitoreo", page), {}, async (base) => {
+      expect(await (await fetch(`${base}/health`)).text()).toBe("ok");
+      expect((await fetch(`${base}/compra`)).status).toBe(200);
+      expect((await fetch(`${base}/error`)).status).toBe(500);
+      const html = await (await fetch(base)).text();
+      expect(html).toContain("Ferretería El Tornillo");
+      expect(html).not.toContain("__PAGE__");
+    });
+  }, 20_000);
+
+  it("ferreteria: the page's script uses no names that collide with browser globals", () => {
+    const page = readFileSync(resolve(BLUEPRINT_DIR, "cr-ferreteria-monitoreo", "page.html"), "utf8");
+    const script = /<script>([\s\S]*?)<\/script>/.exec(page)![1]!;
+    expect(script).not.toMatch(/\bvar\s+(status|name|top|parent|self|length|event)\b|,\s*(status|name|top|parent|self|length|event)\s*=/);
+    expect(() => new Function(script)).not.toThrow();
+  });
+
+  it("municipio: the app reads the report with a token from its identity, and says so when the role is missing", async () => {
+    let allowed = true;
+    const seen: { tokenHeader?: string; auth?: string; path?: string } = {};
+    const identity = createServer((q, r) => {
+      seen.tokenHeader = String(q.headers["x-identity-header"]);
+      r.writeHead(200, { "content-type": "application/json" });
+      r.end(JSON.stringify({ access_token: "tok-123" }));
+    });
+    const blob = createServer((q, r) => {
+      seen.auth = String(q.headers.authorization);
+      seen.path = q.url;
+      r.writeHead(allowed ? 200 : 403);
+      r.end(allowed ? "informe de ejemplo" : "no");
+    });
+    await new Promise<void>((ok) => identity.listen(0, "127.0.0.1", ok));
+    await new Promise<void>((ok) => blob.listen(0, "127.0.0.1", ok));
+    const port = (s: typeof identity) => (s.address() as { port: number }).port;
+    try {
+      const page = readFileSync(resolve(BLUEPRINT_DIR, "cr-municipio-accesos", "page.html"), "utf8");
+      const env = { STORAGE_ACCOUNT: "cuentademo", IDENTITY_ENDPOINT: `http://127.0.0.1:${port(identity)}/msi/token`, IDENTITY_HEADER: "secret-h", BLOB_BASE: `http://127.0.0.1:${port(blob)}` };
+      await withServer(embed("cr-municipio-accesos", page), env, async (base) => {
+        expect(await (await fetch(base)).text()).toContain("cuentademo");
+        const ok = (await (await fetch(`${base}/leer`)).json()) as { ok: boolean; texto?: string };
+        expect(ok).toMatchObject({ ok: true, texto: "informe de ejemplo" });
+        expect(seen).toEqual({ tokenHeader: "secret-h", auth: "Bearer tok-123", path: "/informes/informes/informe-acueducto.txt" });
+        allowed = false;
+        const denied = (await (await fetch(`${base}/leer`)).json()) as { ok: boolean; status: number; error: string };
+        expect(denied).toMatchObject({ ok: false, status: 403 });
+        expect(denied.error).toMatch(/no tiene un rol/);
+      });
+      // Without an identity the page explains why instead of crashing.
+      await withServer(embed("cr-municipio-accesos", page), { STORAGE_ACCOUNT: "x" }, async (base) => {
+        expect(((await (await fetch(`${base}/leer`)).json()) as { error: string }).error).toMatch(/identidad administrada/);
+      });
+    } finally {
+      identity.close();
+      blob.close();
+    }
+  }, 20_000);
 
   it("every lab that declares a gate has a url output to check, and no lab blocks on a web gate by default", () => {
     for (const b of BLUEPRINTS) {

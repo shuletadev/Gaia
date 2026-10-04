@@ -2,7 +2,7 @@
 
 Blueprint `cr-cafe-demanda` · code `ccafe` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 2
 
-**Exam mapping:** AI-900 (fundamental principles of machine learning on Azure: regression, classification, clustering, training and validation data, features and labels, no-code tools, responsible AI).
+**Exam mapping:** *AI-900 was retired on 30 June 2026 and AI-901 no longer tests machine learning; this lab is kept as background and for responsible-AI discussion.* AI-900 (fundamental principles of machine learning on Azure: regression, classification, clustering, training and validation data, features and labels, no-code tools, responsible AI).
 
 ## Scenario
 A coffee roaster in Heredia sells more in the cold months and before holidays, but orders beans by feel and either

@@ -60,7 +60,11 @@ Student environment (proposal, for discussion):
 - **Admission control** for shared quotas: stagger deployments of models and large VMs, and request quota ahead of class.
 - **Outside Gaia's reach**: SC-900's tenant labs and DP-900's Fabric labs need their own delivery plan.
 
-Decisions needed from you:
+Answers so far (2026-10-04): (1) the substitution note is fine; (2) SC-900 options researched, see
+[sc-900.md](sc-900.md); (3) no Microsoft Fabric yet, so DP-900's Fabric labs cannot be delivered hands-on for now; (4) the
+business subscription is **pay-as-you-go** (its actual model quota is not yet known).
+
+Decisions that were needed from you:
 
 1. Are you comfortable giving students a one-page substitution note (their resource group instead of `IntroAzureRG`)?
 2. How will you deliver SC-900's labs (an authorized lab hoster, a Microsoft 365 developer tenant, or demos only)? I

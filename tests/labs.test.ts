@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BLUEPRINTS, LAB_NAME, getBlueprint, newLabName } from "../server/labs/blueprints.ts";
-import { innermostErrors, mergeProgress, planReconcile, prepareLab, prepareRetry, purgeMlWorkspaces, purgeSoftDeleted, removeLocks, stackBody, LabRequestError } from "../server/labs/engine.ts";
+import { innermostErrors, mergeProgress, planReconcile, prepareLab, prepareRetry, purgeBackupItems, purgeMlWorkspaces, purgeSoftDeleted, removeLocks, stackBody, LabRequestError } from "../server/labs/engine.ts";
 import { ArmError, type ArmClient } from "../server/azure/arm.ts";
 import { meterFilter, pickPrice } from "../server/labs/pricing.ts";
 import { canAutoDelete } from "../server/guard.ts";
@@ -229,6 +229,45 @@ describe("soft-delete purging", () => {
       expect(lro).toEqual([]);
     }
     await expect(purgeMlWorkspaces(fakeArm({ "MachineLearningServices/workspaces": new ArmError("x", 500, "Err") }).arm, sub, lab)).rejects.toThrow();
+  });
+});
+
+describe("backup items", () => {
+  const lab = "lab-crespa-ab12";
+  const vault = `/subscriptions/${SUB}/resourceGroups/${lab}/providers/Microsoft.RecoveryServices/vaults/${lab}-vault`;
+  const item = `${vault}/backupFabrics/Azure/protectionContainers/iaasvmcontainer;iaasvmcontainerv2;${lab};${lab}-vm/protectedItems/vm;iaasvmcontainerv2;${lab};${lab}-vm`;
+  const fakeArm = (lists: Record<string, unknown>) => {
+    const calls: string[] = [];
+    const arm = {
+      get: async (url: string) => {
+        const key = Object.keys(lists).find((k) => url.includes(k));
+        if (!key) throw new ArmError("nf", 404, "NotFound");
+        const v = lists[key];
+        if (v instanceof Error) throw v;
+        return v;
+      },
+      raw: async (method: string, url: string, body?: unknown) => {
+        calls.push(`${method} ${url} ${JSON.stringify(body)}`);
+        return { status: 200, headers: new Headers(), body: {} };
+      },
+      lro: async (method: string, url: string) => {
+        calls.push(`${method} ${url}`);
+        return {};
+      },
+    } as unknown as Pick<ArmClient, "get" | "raw" | "lro">;
+    return { arm, calls };
+  };
+
+  it("switches soft delete off, then stops protection and deletes the data of each backed-up item", async () => {
+    const { arm, calls } = fakeArm({ "RecoveryServices/vaults?": { value: [{ id: vault, name: `${lab}-vault` }] }, backupProtectedItems: { value: [{ id: item, name: `vm;iaasvmcontainerv2;${lab};${lab}-vm` }] } });
+    await expect(purgeBackupItems(arm, SUB, lab)).resolves.toEqual([`vm;iaasvmcontainerv2;${lab};${lab}-vm`]);
+    expect(calls[0]).toMatch(/^PATCH .*backupconfig\/vaultconfig\?api-version=.* \{"properties":\{"softDeleteFeatureState":"Disabled","enhancedSecurityState":"Disabled"\}\}$/);
+    expect(calls[1]).toMatch(/^DELETE .*protectedItems\/vm;iaasvmcontainerv2;/);
+  });
+
+  it("does nothing when the provider is not registered or the group is gone, and passes real errors on", async () => {
+    for (const status of [400, 404, 409]) await expect(purgeBackupItems(fakeArm({ "RecoveryServices/vaults?": new ArmError("x", status, "Err") }).arm, SUB, lab)).resolves.toEqual([]);
+    await expect(purgeBackupItems(fakeArm({ "RecoveryServices/vaults?": new ArmError("x", 500, "Err") }).arm, SUB, lab)).rejects.toThrow();
   });
 });
 
