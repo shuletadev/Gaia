@@ -46,6 +46,9 @@ import { Sweeper } from "./labs/sweeper.ts";
 import { getLab, listLabs, updateLab } from "./db.ts";
 import { realProbes, validateScope } from "./validate.ts";
 import { buildTopology } from "./topology.ts";
+import { GraphDirectory } from "./sandbox/graph.ts";
+import { courseList, markEnded, provisionSandbox, reprovisionSandbox, SandboxError, syncSandboxes } from "./sandbox/sandbox.ts";
+import { getSandbox } from "./sandbox/store.ts";
 
 // No config yet = first run: the app starts in setup mode and the UI walks through it.
 let initial: LabctlConfig;
@@ -91,7 +94,7 @@ app.setErrorHandler((err, req, reply) => {
   if (err instanceof ScopeError || err instanceof GuardError) return reply.code(403).send({ error: err.message });
   if (err instanceof JobConflictError || err instanceof JobConflictPlanError) return reply.code(409).send({ error: err.message });
   if (err instanceof SetupConflict) return reply.code(409).send(err.body);
-  if (err instanceof SettingsError) return reply.code(400).send({ error: err.message });
+  if (err instanceof SettingsError || err instanceof SandboxError) return reply.code(400).send({ error: err.message });
   if (err instanceof z.ZodError) return reply.code(400).send({ error: z.prettifyError(err) });
   if (err instanceof ArmError) return reply.code(502).send({ error: err.message, code: err.code });
   const status = (err as { statusCode?: number }).statusCode;
@@ -514,6 +517,40 @@ app.delete("/api/labs/:name", async (req) => {
 });
 
 app.post("/api/labs/sweep", async () => sweeper.run("manual"));
+
+// ---- Student sandboxes (one resource group per student and course; see docs/student-sandbox.md) ----
+
+const directory = new GraphDirectory({ tenantId: config.tenantId || undefined });
+const sandboxDeps = () => ({ arm, db, config, directory });
+
+app.get("/api/sandboxes/courses", async () => courseList());
+
+app.get("/api/sandboxes", async () => syncSandboxes({ arm, db }));
+
+app.post("/api/sandboxes", async (req) => {
+  const body = z.object({ student: z.string().min(3).max(200), course: z.string(), days: z.coerce.number().int().min(1).max(90).optional(), subscriptionId: z.string().optional() }).parse(req.body);
+  return provisionSandbox(sandboxDeps(), body);
+});
+
+app.post("/api/sandboxes/:name/reprovision", async (req) => {
+  const { name } = z.object({ name: z.string().regex(/^[A-Za-z0-9._()-]+$/) }).parse(req.params);
+  const { days } = z.object({ days: z.coerce.number().int().min(1).max(90).optional() }).parse(req.body ?? {});
+  const row = getSandbox(db, name);
+  if (row) guardTarget(rgIdFor(row.subscription_id, name));
+  return reprovisionSandbox(sandboxDeps(), name, days);
+});
+
+app.delete("/api/sandboxes/:name", async (req) => {
+  const { name } = z.object({ name: z.string().regex(/^[A-Za-z0-9._()-]+$/) }).parse(req.params);
+  const row = getSandbox(db, name);
+  if (!row) throw new GuardError("Not a sandbox Gaia created");
+  const t = guardTarget(rgIdFor(row.subscription_id, name));
+  return jobs.start("sandbox.destroy", t.id, name, async () => {
+    const note = await destroyLab(arm, db, row.subscription_id, name, { canTouch: touchGuard });
+    markEnded(db, name);
+    return note;
+  });
+});
 
 // ---- Topology --------------------------------------------------------------------------------
 

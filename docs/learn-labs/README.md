@@ -7,18 +7,25 @@ budgets, access, cleanup) are built from fact instead of from our catalog cards.
 ## How this was researched
 
 Read directly from Microsoft's published lab instructions on GitHub (`MicrosoftLearning` organisation) and from
-Microsoft Learn pages, on 2026-10-04. Each exam file says what was read in full and what was only skimmed. **Not covered:
-AZ-104** (later), and the content of every lab step: I extracted resources, SKUs, regions and permissions, not the whole
-instructions. Re-check before each cohort: these repositories change often (several were updated within the last week).
+Microsoft Learn pages, on 2026-10-04. Each exam file says what was read in full and what was only skimmed. The content of every
+lab step is **not** covered: I extracted resources, SKUs, regions and permissions, not the whole instructions. Re-check before each
+cohort: these repositories change often (several were updated within the last week).
+
+**Re-checked 2026-10-04:** AZ-900 is the same five labs (last change 2026-08-13: newer VM versions and the removal of VM
+availability fallbacks from the pricing exercise). The AI exercises are the same seven, with two small changes this week (a video
+generation task removed on 10-01, an interaction mode added on 09-29). **AI-900 retired on 30 June 2026 and AI-901 replaced it**;
+I found no separate AI-901 lab repository, so these seven Foundry exercises are the best match, but whether Microsoft assigns them to
+AI-901 by name is not confirmed.
 
 | Exam | Source (last updated) | Labs |
 |---|---|---|
 | AZ-900 | [AZ-900-Microsoft-Azure-Fundamentals](https://github.com/MicrosoftLearning/AZ-900-Microsoft-Azure-Fundamentals) (2026-08-13) | 5 |
-| AI-900 | [mslearn-ai-fundamentals](https://github.com/MicrosoftLearning/mslearn-ai-fundamentals) (2026-10-02); the older [AI-900-AIFundamentals](https://github.com/MicrosoftLearning/AI-900-AIFundamentals) (2024-09) is **stale** | 7 (current) |
+| AZ-104 | [AZ-104-MicrosoftAzureAdministrator](https://github.com/MicrosoftLearning/AZ-104-MicrosoftAzureAdministrator) (2026-09-24) | 14, plus 11 demos |
+| AI-900 / AI-901 | [mslearn-ai-fundamentals](https://github.com/MicrosoftLearning/mslearn-ai-fundamentals) (2026-10-02); the older [AI-900-AIFundamentals](https://github.com/MicrosoftLearning/AI-900-AIFundamentals) (2024-09) is **stale** | 7 (current) |
 | DP-900 | [DP-900T00A-Azure-Data-Fundamentals](https://github.com/MicrosoftLearning/DP-900T00A-Azure-Data-Fundamentals) (2026-06-22) | 6 |
 | SC-900 | [SC-900-Microsoft-Security-Compliance-and-Identity-Fundamentals](https://github.com/MicrosoftLearning/SC-900-Microsoft-Security-Compliance-and-Identity-Fundamentals) (2026-10-02) | 14 labs + a setup lab, with matching demos |
 
-Per exam: [AZ-900](az-900.md) · [AI-900](ai-900.md) · [DP-900](dp-900.md) · [SC-900](sc-900.md)
+Per exam: [AZ-900](az-900.md) · [AZ-104](az-104.md) · [AI-900 / AI-901](ai-900.md) · [DP-900](dp-900.md) · [SC-900](sc-900.md)
 
 ## What changed my assumptions
 
@@ -71,6 +78,10 @@ Decisions that were needed from you:
    did not verify what is currently available to independent MCTs.
 3. Does the business tenant have Microsoft Fabric (a trial or a paid capacity) for the DP-900 labs?
 4. Which model quota does the business subscription have for the AI-900 Foundry labs, and do you want to request more?
+
+**What AZ-104 adds (see [az-104.md](az-104.md)):** students need a *set* of groups (eleven labs each create their own), more than
+Contributor (policy, locks, and role assignments to themselves), a plan for two tenant-level labs (Entra users and management
+groups), and real quota checks (vCPUs, Premium V3 App Service). AZ-900 is the simple case, and is the first sandbox built.
 
 ## Effect on the instructor catalog
 

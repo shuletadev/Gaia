@@ -69,8 +69,10 @@ export const ICON_SLUGS: Record<string, string> = {
   // icon for locks or role assignments, so those keep the letter-tile fallback.
   "microsoft.sql/servers": "SQL-Server",
   "microsoft.synapse/workspaces": "Azure-Synapse-Analytics",
-  "microsoft.cognitiveservices/accounts": "Cognitive-Services",
-  "microsoft.cognitiveservices/accounts/deployments": "Cognitive-Services",
+  // The AI labs' accounts are Foundry resources (kind AIServices), so they use the Foundry icons from the July 2026 release.
+  "microsoft.cognitiveservices/accounts": "AI-Foundry",
+  "microsoft.cognitiveservices/accounts/projects": "Foundry-Project",
+  "microsoft.cognitiveservices/accounts/deployments": "Foundry-Models",
   "microsoft.search/searchservices": "Cognitive-Search",
   "microsoft.machinelearningservices/workspaces": "Machine-Learning",
   "microsoft.machinelearningservices/workspaces/computes": "Machine-Learning",

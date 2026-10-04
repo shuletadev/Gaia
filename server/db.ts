@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DATA_DIR } from "./config.ts";
+import { ensureSandboxTable } from "./sandbox/store.ts";
 
 export type Db = DatabaseSync;
 
@@ -66,6 +67,7 @@ export function openDb(path = resolve(DATA_DIR, "labctl.db")): Db {
   if (!cols.some((c) => c.name === "pid")) db.exec("ALTER TABLE jobs ADD COLUMN pid INTEGER");
   const labCols = db.prepare("PRAGMA table_info(labs)").all() as { name: string }[];
   if (!labCols.some((c) => c.name === "stage_json")) db.exec("ALTER TABLE labs ADD COLUMN stage_json TEXT");
+  ensureSandboxTable(db);
   db.exec("PRAGMA busy_timeout = 5000");
   recoverInterruptedJobs(db);
   return db;

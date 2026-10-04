@@ -48,6 +48,8 @@ subscriptions.
 
 **22 labs in the catalog are built** (specs in catalog/, one file per lab under server/labs/catalog/), plus two instructor guides (identity, infrastructure as code), with 320+ unit tests and all Bicep compiling. **None has been deployed to Azure yet.** Next: a sandbox test pass, then student-mode policy packs and Spanish guides.
 
+**Student sandbox (2026-10-05):** the server side of option A below (one group per student, scoped role, policies, budget, expiry, re-provision) is built for **AZ-900** and unit-tested, with no screen and never run against Azure: see [student-sandbox.md](student-sandbox.md), which also lists the decisions needed from you. The inventory of Microsoft's labs now includes [AZ-104](learn-labs/az-104.md) (which needs more than one group, constrained role assignments and quota checks).
+
 **Scope (2026-10-04): the catalog is being built for AZ-900, AI-901 and AZ-104 only.** AI-900 retired on 30 June 2026; AI-901 replaced it
 (Foundry-based). Batch 4 (labs 16 to 21: monitoring, storage administration, containers, backup, RBAC, infrastructure as code) and batch 5 (labs 22 to 24:
 Foundry agent, voice and vision, Content Understanding) were added for the gaps. Known gaps: VM scale sets, Bastion, private endpoints and user-defined routes (AZ-104).
