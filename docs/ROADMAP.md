@@ -41,6 +41,10 @@ subscriptions.
 
 ## Showcase catalog progress
 
+Spec cards for 15 labs (one per exam section at least) live in [docs/catalog/](catalog/README.md): review and prune
+there before anything else is built. Build order: batch 1 (one per section) 04, 03, 05, 02, 07, 08, 12; batch 2 10,
+11, 06, 14, 09; batch 3 13 and the identity demo. Deployment testing waits until several labs exist.
+
 - [x] `cr-farmacia-recibos` (pharmacy digital receipts): infrastructure plus a Spanish cashier app deployed by the new
   content step (SWA deployment token + pinned SWA CLI). The app keeps sales in the browser; saving them to the lab's
   Cosmos DB and Blob Storage (a Static Web Apps managed API) is the next step.

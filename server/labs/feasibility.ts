@@ -188,7 +188,7 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
   const ttlMin = i.ttlHours * 60;
   if (minMin >= ttlMin) out.push({ id: "ttl", label: "Lifetime", status: "fail", detail: `Deploy takes ${minMin}+ min; lifetime is ${i.ttlHours} h` });
   else if (maxMin > ttlMin / 2) out.push({ id: "ttl", label: "Lifetime", status: "warn", detail: `Deploy can take ${maxMin} min of the ${i.ttlHours} h lifetime` });
-  else out.push({ id: "ttl", label: "Lifetime", status: "pass", detail: `${minMin}â€“${maxMin} min to deploy, ${i.ttlHours} h to use` });
+  else out.push({ id: "ttl", label: "Lifetime", status: "pass", detail: `${minMin}–${maxMin} min to deploy, ${i.ttlHours} h to use` });
 
   // Budget impact.
   const labCost = i.hourly * i.ttlHours;
@@ -200,7 +200,7 @@ export function evaluateFeasibility(i: FeasibilityInput, f: AzureFacts): Feasibi
   } else if (forecast + labCost > B) {
     out.push({ id: "budget", label: "Budget", status: "warn", detail: `Forecast ${usd(forecast)} + ~${usd(labCost)} passes ${usd(B)}` });
   } else if (high || labCost > B * 0.2) {
-    out.push({ id: "budget", label: "Budget", status: "warn", detail: `${usd(i.hourly)}/h â€” ~${usd(labCost)} for ${i.ttlHours} h (forecast ${usd(forecast)} of ${usd(B)})` });
+    out.push({ id: "budget", label: "Budget", status: "warn", detail: `${usd(i.hourly)}/h — ~${usd(labCost)} for ${i.ttlHours} h (forecast ${usd(forecast)} of ${usd(B)})` });
   } else {
     out.push({ id: "budget", label: "Budget", status: "pass", detail: `~${usd(labCost)} for ${i.ttlHours} h; forecast ${usd(forecast)} of ${usd(B)}` });
   }

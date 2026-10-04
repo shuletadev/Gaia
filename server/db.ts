@@ -85,7 +85,7 @@ export function isProcessAlive(pid: number | null | undefined): boolean {
 
 /**
  * The app, the logon sweep and the CLI scripts share this database. A "running" job is only
- * interrupted if the process that owns it is gone â€” never just because another process started.
+ * interrupted if the process that owns it is gone — never just because another process started.
  */
 export function recoverInterruptedJobs(db: Db, alive: (pid: number | null) => boolean = isProcessAlive): number {
   const rows = db.prepare("SELECT id, pid FROM jobs WHERE status = 'running'").all() as { id: string; pid: number | null }[];

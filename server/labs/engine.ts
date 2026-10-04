@@ -57,7 +57,7 @@ export class LabRequestError extends Error {}
 export function prepareLab(config: LabctlConfig, req: LabRequest, now = new Date(), opts: { skipRules?: boolean } = {}): PreparedLab {
   const blueprint = getBlueprint(req.blueprint);
   if (!config.labs.regions.includes(req.region)) throw new LabRequestError(`Region ${req.region} is not enabled in Settings`);
-  if (!(Number.isFinite(req.ttlHours) && req.ttlHours >= 1 && req.ttlHours <= 72)) throw new LabRequestError("Lifetime must be 1â€“72 hours");
+  if (!(Number.isFinite(req.ttlHours) && req.ttlHours >= 1 && req.ttlHours <= 72)) throw new LabRequestError("Lifetime must be 1–72 hours");
   const parsed = blueprint.schema.safeParse(req.params ?? {});
   if (!parsed.success) throw new LabRequestError(`Invalid parameters: ${parsed.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
   const ruleErrors = blueprint.rules?.(parsed.data) ?? [];
@@ -372,7 +372,7 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
       if (!(opts.skipFirstPut && i === start)) {
         for (const h of p.blueprint.paramHooks ?? []) {
           if (h.fromStage > (stage.value ?? Number.MAX_SAFE_INTEGER) || ranHooks.has(h.hook)) continue;
-          save(i, "deploying", { detail: `${stage.label} Â· preparing ${h.label}`, stageStartedAt });
+          save(i, "deploying", { detail: `${stage.label} · preparing ${h.label}`, stageStartedAt });
           Object.assign(hookParams, await hooks[h.hook]({ arm, labName: p.labName, subscriptionId: p.subscriptionId, region: p.region, params: p.params, outputs }));
           ranHooks.add(h.hook);
           save(i, "deploying", { detail: stage.label, stageStartedAt });
@@ -405,7 +405,7 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
       if (stage.gate) {
         const gate = stage.gate;
         const gateStarted = Date.now();
-        save(i, "gate", { gate: gate.label, detail: "Checkingâ€¦", stageStartedAt });
+        save(i, "gate", { gate: gate.label, detail: "Checking…", stageStartedAt });
         const r = await runGate(gate, { x: probes, sub: p.subscriptionId, labName: p.labName, params: p.params, outputs }, {
           ...opts.gateOpts,
           onTick: (t) => save(i, "gate", { gate: gate.label, detail: t.detail, stageStartedAt }),

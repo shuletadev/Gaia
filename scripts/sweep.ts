@@ -23,7 +23,7 @@ try {
     if (result.started.length) {
       await jobs.drain();
       for (const j of jobs.recent(50).filter((x) => x.kind === "lab.expire" && result.started.includes(x.target_name) && x.pid === process.pid)) {
-        logLine(LOG, `[${trigger}] ${j.target_name}: ${j.status}${j.error ? ` â€” ${j.error}` : ""}`);
+        logLine(LOG, `[${trigger}] ${j.target_name}: ${j.status}${j.error ? ` — ${j.error}` : ""}`);
       }
     }
   }

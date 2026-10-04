@@ -13,7 +13,7 @@ import type { Catalog, InventoryGroup, Job, Lab, LabsResponse, StageState, StepP
 
 const ACTIVE = new Set(["deploying", "ready", "failed", "destroying"]);
 
-/** Estimated cost of a finished lab (lifetime Ã— hourly estimate). */
+/** Estimated cost of a finished lab (lifetime × hourly estimate). */
 const labCost = (l: Lab) => (l.createdAt && l.destroyedAt && l.estHourly ? ((new Date(l.destroyedAt).getTime() - new Date(l.createdAt).getTime()) / 3_600_000) * l.estHourly : 0);
 
 export function Labs({ go }: { go: (s: "catalog") => void }) {
@@ -56,7 +56,7 @@ export function Labs({ go }: { go: (s: "catalog") => void }) {
     try {
       const sub = /^\/subscriptions\/([^/]+)/i.exec(lab.resourceGroupId)?.[1] ?? "";
       trackJobs([await api<Job>(`/api/labs/${encodeURIComponent(lab.name)}?subscriptionId=${encodeURIComponent(sub)}`, { method: "DELETE" })]);
-      notify(`Destroying ${lab.name}â€¦`);
+      notify(`Destroying ${lab.name}…`);
       load();
     } catch (e) {
       notify((e as Error).message, "bad");
@@ -78,7 +78,7 @@ export function Labs({ go }: { go: (s: "catalog") => void }) {
   const retry = async (lab: Lab) => {
     try {
       trackJobs([await api<Job>(`/api/labs/${encodeURIComponent(lab.name)}/retry`, { method: "POST" })]);
-      notify(`Retrying ${lab.name}â€¦`);
+      notify(`Retrying ${lab.name}…`);
       load();
     } catch (e) {
       notify((e as Error).message, "bad");
@@ -90,7 +90,7 @@ export function Labs({ go }: { go: (s: "catalog") => void }) {
       <div className="flex flex-wrap items-center gap-3 text-xs text-stone-500">
         <span className={`size-1.5 rounded-full ${data.sweep.enabled ? "bg-calm" : "bg-stone-400"}`} />
         {data.sweep.enabled ? <>Auto-clean {data.sweep.nextAt ? relTime(data.sweep.nextAt) : "pending"}</> : "Auto-clean off"}
-        {data.sweep.last && <span>Â· last {relTime(data.sweep.last.at)}</span>}
+        {data.sweep.last && <span>· last {relTime(data.sweep.last.at)}</span>}
         <Btn onClick={sweepNow}>Sweep now</Btn>
         <Btn tone="solid" className="ml-auto" onClick={() => go("catalog")}>New lab</Btn>
       </div>
@@ -111,10 +111,10 @@ export function Labs({ go }: { go: (s: "catalog") => void }) {
       {history.length > 0 && (
         <details className="group">
           <summary className="flex cursor-pointer list-none items-center gap-3 select-none [&::-webkit-details-marker]:hidden">
-            <span className="text-stone-400 transition group-open:rotate-90">â€º</span>
+            <span className="text-stone-400 transition group-open:rotate-90">›</span>
             <Label>History</Label>
             <span className="font-mono text-[10px] text-stone-400">
-              {history.length} Â· â‰ˆ{usd(history.reduce((s, l) => s + labCost(l), 0))}
+              {history.length} · ≈{usd(history.reduce((s, l) => s + labCost(l), 0))}
             </span>
             <span className="h-px flex-1 bg-stone-300/60 dark:bg-stone-800" />
           </summary>
@@ -135,10 +135,10 @@ export function Labs({ go }: { go: (s: "catalog") => void }) {
                         <li key={l.name} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 py-2.5 text-sm">
                           <div className="flex -space-x-1">{(bp(l.blueprint)?.icons ?? []).map((t) => <ResourceIcon key={t} type={t} size={18} />)}</div>
                           <div className="min-w-0 truncate">
-                            {l.name} <span className="text-stone-500">Â· {l.purpose ?? bp(l.blueprint)?.title}</span>
+                            {l.name} <span className="text-stone-500">· {l.purpose ?? bp(l.blueprint)?.title}</span>
                           </div>
                           <span className="font-mono text-xs text-stone-500">{hours !== undefined ? `${hours.toFixed(1)}h` : l.status}</span>
-                          <span className="w-16 text-right font-mono text-xs tabular-nums">{hours !== undefined && l.estHourly ? `â‰ˆ${usd(hours * l.estHourly)}` : "â€”"}</span>
+                          <span className="w-16 text-right font-mono text-xs tabular-nums">{hours !== undefined && l.estHourly ? `≈${usd(hours * l.estHourly)}` : "—"}</span>
                         </li>
                       );
                     })}
@@ -222,13 +222,13 @@ function LabCard({ lab, icons, title, running, onDestroy, onExtend, onRetry }: {
             </Chip>
           </div>
           <div className="truncate text-sm text-stone-500">
-            {lab.purpose && lab.purpose !== title ? `${lab.purpose} Â· ` : ""}
-            {title} Â· {lab.region}
+            {lab.purpose && lab.purpose !== title ? `${lab.purpose} · ` : ""}
+            {title} · {lab.region}
           </div>
         </div>
         <div className="text-right">
-          <div className={`font-mono text-sm tabular-nums ${expired ? "text-signal" : ""}`}>{lab.expiresOn ? (expired ? "expired" : relTime(lab.expiresOn)) : "â€”"}</div>
-          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500">{hoursUp !== undefined && lab.estHourly ? `â‰ˆ${usd(hoursUp * lab.estHourly)} so far` : ""}</div>
+          <div className={`font-mono text-sm tabular-nums ${expired ? "text-signal" : ""}`}>{lab.expiresOn ? (expired ? "expired" : relTime(lab.expiresOn)) : "—"}</div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500">{hoursUp !== undefined && lab.estHourly ? `≈${usd(hoursUp * lab.estHourly)} so far` : ""}</div>
         </div>
       </header>
 
@@ -271,7 +271,7 @@ function LabCard({ lab, icons, title, running, onDestroy, onExtend, onRetry }: {
           </summary>
           <ul className="mt-1.5 space-y-1 text-stone-500">
             {stage.warnings.map((w) => <li key={w}>! {w}</li>)}
-            {(stage.passed ?? []).map((w) => <li key={w}>âœ“ {w}</li>)}
+            {(stage.passed ?? []).map((w) => <li key={w}>✓ {w}</li>)}
           </ul>
         </details>
       )}
@@ -330,7 +330,7 @@ function StageTrack({ stage, failed, eta }: { stage: StageState; failed: boolean
       </div>
       <div className="mt-1.5 flex justify-between font-mono text-[10px] uppercase tracking-widest text-stone-500">
         <span>
-          Stage {Math.min(stage.index + 1, stage.total)}/{stage.total} Â· {stage.labels[stage.index]}
+          Stage {Math.min(stage.index + 1, stage.total)}/{stage.total} · {stage.labels[stage.index]}
         </span>
         <span title={eta !== undefined ? "From your previous deployments of this setup" : undefined}>
           {eta !== undefined ? `~${eta} min left` : stage.phase === "gate" ? "gate" : stage.phase}

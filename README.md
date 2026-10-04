@@ -148,7 +148,8 @@ resource would hold the group delete hostage. Notes flag soft-deleted services (
 
 ## Lab catalog
 
-The catalog is being rebuilt for the training business (see [docs/ROADMAP.md](docs/ROADMAP.md)): the original
+The catalog is being rebuilt for the training business (see [docs/ROADMAP.md](docs/ROADMAP.md); lab specs in
+[docs/catalog/](docs/catalog/README.md)): the original
 API Management / networking blueprints were removed, and new showcase scenarios are added under `blueprints/<id>/`
 as Bicep (preferably [Azure Verified Modules](https://aka.ms/avm)). `server/labs/blueprints.ts` declares each
 blueprint's parameters, rules, presets, stages/gates, quotas, progress steps and price meters; a blueprint can also

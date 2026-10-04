@@ -1,0 +1,38 @@
+# 08 · Tourist reviews
+
+Blueprint `cr-resenas-turismo` · code `cresen` · **Status: Spec** · Batch 1
+
+**Exam mapping:** AI-900 (natural language processing workloads: sentiment, key phrases, language detection, translation, entity recognition).
+
+## Scenario
+A hotel group in La Fortuna gets hundreds of reviews in Spanish and English on several sites. The manager reads a few
+and misses the pattern: is the problem the breakfast, the noise, or the road? She wants the computer to tell her.
+
+## Students learn
+- Run sentiment analysis, key-phrase extraction and language detection on Spanish and English text.
+- Translate reviews between Spanish and English.
+- Read the results critically: sarcasm, slang ("tuanis", "mae") and mixed-sentiment reviews.
+- Explain the difference between sentiment on a document and on each sentence.
+
+## Architecture
+Azure AI services account (Language and Translator capabilities) and a Storage account with a `resenas` container
+holding about 50 **synthetic** reviews in Spanish and English (some with Costa Rican slang). Studio-based; no custom app.
+
+## Knobs
+`dataset`: small / with slang / mixed languages.
+
+## Cost and time
+Pay per text record, idle about $0 (free tiers exist with monthly limits). Deploy 2 to 4 min. Lifetime: one class.
+
+## Student activities
+Analyze the whole set; chart sentiment by topic by hand from the key phrases; find three reviews the model got wrong
+and explain why; translate a review and judge the quality.
+
+## Student-mode policy pack
+Same as lab 07: AI services S0 or free only, one per student, no custom model training.
+
+## Build notes and risks
+- Shares the AI-services Bicep module with lab 07; build them together.
+- Soft-deleted accounts must be purged on destroy.
+- Synthetic reviews must be written by us; avoid real names and real businesses.
+- Language availability and slang handling vary; test with the actual studio before class.

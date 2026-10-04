@@ -46,7 +46,7 @@ export function Catalog({ onLaunched }: { onLaunched: () => void }) {
   return (
     <>
       <div className="mb-6 flex items-center gap-3">
-        <p className="text-sm text-stone-500">{catalog.blueprints.length} blueprints Â· {catalog.blueprints.filter((b) => b.custom).length} exported</p>
+        <p className="text-sm text-stone-500">{catalog.blueprints.length} blueprints · {catalog.blueprints.filter((b) => b.custom).length} exported</p>
       </div>
       <div className="space-y-10">
         {catalog.categories
@@ -80,21 +80,21 @@ export function Catalog({ onLaunched }: { onLaunched: () => void }) {
             <p className="mt-1 text-sm text-stone-500">{b.tagline}</p>
             <div className="mt-6 flex items-end justify-between">
               <div>
-                <div className="font-mono text-2xl tabular-nums">{rates[b.id] === undefined ? "â€¦" : usd(rates[b.id])}</div>
+                <div className="font-mono text-2xl tabular-nums">{rates[b.id] === undefined ? "…" : usd(rates[b.id])}</div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500">per hour</div>
               </div>
               <div className="text-right">
                 <Chip tone="plain">
-                  {b.deployMinutes[0]}â€“{b.deployMinutes[1]} min
+                  {b.deployMinutes[0]}–{b.deployMinutes[1]} min
                 </Chip>
                 <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-stone-500">{b.ttlHours}h default</div>
               </div>
             </div>
-            <span className="absolute top-6 right-6 text-xs text-stone-400 opacity-0 transition group-hover:opacity-100">Launch â†’</span>
+            <span className="absolute top-6 right-6 text-xs text-stone-400 opacity-0 transition group-hover:opacity-100">Launch →</span>
             {b.custom && (
               <span className="mt-4 flex items-center gap-2 text-[10px] text-stone-500">
                 <Chip tone="calm">exported</Chip>
-                from {b.custom.source.resourceGroup} Â· {b.custom.module === "lab.bicep" ? "Bicep" : "ARM JSON"}
+                from {b.custom.source.resourceGroup} · {b.custom.module === "lab.bicep" ? "Bicep" : "ARM JSON"}
                 {b.custom.warnings.length > 0 && <Chip tone="amber">{b.custom.warnings.length} warning(s)</Chip>}
               </span>
             )}
@@ -171,7 +171,7 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
     setPhase("launching");
     const res = await api<{ job: Job; labName: string }>("/api/labs", { method: "POST", body: { ...body, labName } });
     trackJobs([res.job]);
-    notify(`Launching ${res.labName}â€¦`);
+    notify(`Launching ${res.labName}…`);
     onLaunched();
   };
 
@@ -194,7 +194,7 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
   const register = async (namespaces: string[]) => {
     try {
       for (const ns of namespaces) await api(`/api/providers/${encodeURIComponent(ns)}/register`, { method: "POST", body: { subscriptionId } });
-      notify(`Registering ${namespaces.join(", ")} â€” re-check in a few minutes`);
+      notify(`Registering ${namespaces.join(", ")} — re-check in a few minutes`);
     } catch (e) {
       notify((e as Error).message, "bad");
     }
@@ -204,7 +204,7 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
   const expires = new Date(Date.now() + ttl * 3_600_000).toISOString();
   const blocked = rules.length > 0 || fails.length > 0 || (warns.length > 0 && !ack);
   const label =
-    phase === "checking" ? "Checkingâ€¦" : phase === "launching" ? "Launchingâ€¦" : fails.length ? "Re-check" : current ? "Launch" : "Check & launch";
+    phase === "checking" ? "Checking…" : phase === "launching" ? "Launching…" : fails.length ? "Re-check" : current ? "Launch" : "Check & launch";
 
   return (
     <Modal title="Launch lab" onClose={onClose}>
@@ -274,14 +274,14 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
       </div>
       {rules.length > 0 && (
         <ul className="mt-3 space-y-1 text-xs text-signal">
-          {rules.map((r) => <li key={r}>âœ• {r}</li>)}
+          {rules.map((r) => <li key={r}>✕ {r}</li>)}
         </ul>
       )}
 
       <label className="mt-5 block">
         <div className="flex items-baseline justify-between">
           <Label>Lifetime</Label>
-          <span className="font-mono text-sm">{ttl}h Â· expires {relTime(expires)}</span>
+          <span className="font-mono text-sm">{ttl}h · expires {relTime(expires)}</span>
         </div>
         <input type="range" min={1} max={72} value={ttl} onChange={(e) => setTtl(Number(e.target.value))} className="mt-2 w-full accent-[#ff6a3d]" />
       </label>
@@ -298,13 +298,13 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
 
       <div className="mt-5 flex items-end justify-between rounded-2xl bg-stone-200/50 p-4 dark:bg-stone-900">
         <div>
-          <div className="font-mono text-3xl tabular-nums">{est ? usd(est.hourly * ttl) : "â€¦"}</div>
-          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500">{est ? `${usd(est.hourly)}/hr Ã— ${ttl}h` : "estimating"}</div>
+          <div className="font-mono text-3xl tabular-nums">{est ? usd(est.hourly * ttl) : "…"}</div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-stone-500">{est ? `${usd(est.hourly)}/hr × ${ttl}h` : "estimating"}</div>
         </div>
         <details className="text-right text-xs text-stone-500">
           <summary className="cursor-pointer select-none">Breakdown</summary>
           <ul className="mt-2 space-y-0.5">
-            {est?.lines.map((l) => <li key={l.label}>{l.label} Â· {l.hourly === undefined ? "n/a" : `${usd(l.hourly, 3)}/hr`}</li>)}
+            {est?.lines.map((l) => <li key={l.label}>{l.label} · {l.hourly === undefined ? "n/a" : `${usd(l.hourly, 3)}/hr`}</li>)}
             {est?.notes.map((n) => <li key={n} className="opacity-70">+ {n}</li>)}
           </ul>
         </details>
@@ -312,10 +312,10 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
 
       <details className="mt-4 text-sm text-stone-500">
         <summary className="cursor-pointer select-none">
-          {stages.length > 1 ? `${stages.length} stages` : `${(est?.steps ?? b.steps).length} steps`} Â· {minutes[0]}â€“{minutes[1]} min
+          {stages.length > 1 ? `${stages.length} stages` : `${(est?.steps ?? b.steps).length} steps`} · {minutes[0]}–{minutes[1]} min
           {(est?.timing ?? b.timing)?.source === "learned" && (
             <span className="ml-1.5 text-xs text-calm" title={`Learned from your last ${(est?.timing ?? b.timing)!.samples} deployment(s)`}>
-              Â· typically {(est?.timing ?? b.timing)!.typical} min ({(est?.timing ?? b.timing)!.samples} run{(est?.timing ?? b.timing)!.samples > 1 ? "s" : ""})
+              · typically {(est?.timing ?? b.timing)!.typical} min ({(est?.timing ?? b.timing)!.samples} run{(est?.timing ?? b.timing)!.samples > 1 ? "s" : ""})
             </span>
           )}
         </summary>
@@ -325,7 +325,7 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
               <li key={s.label} className="flex flex-wrap items-center gap-2">
                 <span className="grid size-5 place-items-center rounded-full bg-stone-200 font-mono text-[10px] dark:bg-stone-800">{i + 1}</span>
                 {s.label}
-                {s.gate && <span className="text-xs text-stone-400">â¸ {s.gate}</span>}
+                {s.gate && <span className="text-xs text-stone-400">⏸ {s.gate}</span>}
               </li>
             ))}
           </ol>
@@ -347,13 +347,13 @@ export function LaunchDialog({ blueprint: b, catalog, onClose, onLaunched, initi
           {altResult && (altResult.loading || (altResult.result && (altResult.result.alternatives.length > 0 || altResult.result.ttl))) && (
             <div className="mt-3 border-t border-stone-200 pt-3 dark:border-stone-800">
               <Label>{fails.length ? "Deployable instead" : "Cheaper options"}</Label>
-              {altResult.loading && <p className="mt-2 text-xs text-stone-500">Checking other regions and tiersâ€¦</p>}
+              {altResult.loading && <p className="mt-2 text-xs text-stone-500">Checking other regions and tiers…</p>}
               <ul className="mt-2 space-y-1.5">
                 {altResult.result?.alternatives.map((a) => (
                   <li key={a.region + JSON.stringify(a.params)} className="flex items-start gap-2 text-xs">
                     <span className="w-16 shrink-0 font-mono tabular-nums">{usd(a.hourly)}/h</span>
                     <span className="min-w-0 flex-1">
-                      {a.changes.join(" Â· ") || "Same setup"}
+                      {a.changes.join(" · ") || "Same setup"}
                       {a.loses && <span className="block text-stone-500">loses {a.loses}</span>}
                     </span>
                     <button onClick={() => apply(a)} className="shrink-0 rounded-full bg-stone-900 px-2 py-0.5 text-[10px] text-white dark:bg-white dark:text-black">
