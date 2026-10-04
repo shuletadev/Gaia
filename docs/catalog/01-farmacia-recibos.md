@@ -23,13 +23,9 @@ Static Web App (Free) with the cashier app, Cosmos DB serverless (`ventas`, `pro
 ## Cost and time
 About $0/hour idle (usage-based). Deploy 3 to 8 min. Suggested lifetime: one class.
 
-## Student activities
+## Class activities (instructor-led)
 Open the app and make a sale; find each resource in the portal; change storage redundancy and read the cost change;
 explain why Cosmos DB is "serverless".
-
-## Student-mode policy pack
-`Microsoft.Web/staticSites` (Free), `Microsoft.DocumentDB/databaseAccounts` (serverless only), `Microsoft.Storage/storageAccounts`
-(Standard LRS/GRS), blob containers. Regions: Central US, East US 2.
 
 ## Build notes and risks
 - Next step: a Static Web Apps managed API so sales really land in Cosmos DB and receipts in Blob Storage.

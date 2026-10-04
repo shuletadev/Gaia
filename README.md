@@ -160,6 +160,18 @@ be created from an existing resource group with **Save as blueprint** (below). E
 |---|---|---|---|
 | `cr-farmacia-recibos` | **Farmacia Pura Vida**: a pharmacy's digital receipts. Static Web App (Free) front end with a Spanish cashier app (catalog, cart, IVA, digital receipt, daily sales), Cosmos DB serverless sales database, Storage account for receipt files (LRS or GRS) | ~0 (usage-based) | 3–8 min |
 | `cr-taller-servidores` | **Taller Los Ángeles**: the same appointment page on a small Linux VM (nginx via cloud-init, only port 80 open, optional nightly shutdown) and on App Service (Free or Basic) | ~0.02 (Roomier ~0.08) | 4–9 min |
+| `cr-cooperativa-gobierno` | **Cooperativa**: three department storage accounts tagged by cost center, a delete lock, three built-in policies (allowed regions, required tag, Standard_LRS only; enforce or report only) and a monthly budget with alerts. Needs Owner | 0 | 2–5 min |
+| `cr-soda-sitio-web` | **Soda Doña Rosa**: a menu website on Storage static hosting plus a DNS zone with A, CNAME and TXT records | ~0 | 2–5 min |
+| `cr-pulperia-inventario` | **Pulpería Don Beto**: Azure SQL Database (Basic, serverless or free offer) seeded with a corner store's inventory, tables and views | 0.007 (basic) | 3–8 min |
+| `cr-facturas-escaner` | **Invoice scanner**: an AI services account and synthetic invoices and receipts for Document Intelligence Studio | pay per page | 2–5 min |
+| `cr-resenas-turismo` | **Tourist reviews**: AI services plus 60 synthetic Spanish and English reviews for Language Studio and translation | pay per use | 2–5 min |
+| `cr-clinica-seguridad` | **Clínica**: Key Vault with RBAC and audit logs, NSG, locked-down storage and an app identity. Needs Owner | ~0 | 3–7 min |
+| `cr-fincas-archivo` | **Coffee farms**: blob tiers, lifecycle rule, soft delete and versioning, plus a file share, queue and table | ~0 | 2–5 min |
+| `cr-ventas-reporte` | **Monthly sales report**: a data lake with synthetic sales files and a Synapse serverless SQL workspace. Needs Owner | ~0 (per TB queried) | 5–12 min |
+| `cr-tour-escala` | **Tour operator**: App Service Standard with autoscale, a staging slot, a health check and a load-simulator page | 0.095 per instance | 4–8 min |
+| `cr-cafe-demanda` | **Coffee demand**: a Machine Learning workspace, a scale-to-zero CPU cluster and a synthetic sales dataset | ~0 idle (compute while jobs run) | 4–9 min |
+| `cr-guia-turistico` | **Tourist guide chat**: a Foundry project, a capped chat model, AI Search and synthetic brochures | pay per token (+ search) | 5–12 min |
+| `cr-sucursales-red` | **Branch network**: hub and two spokes with peering, a Standard load balancer over two servers, private DNS and a client VM | 0.077 | 8–15 min |
 
 **Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the
 public [Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices).
@@ -188,8 +200,8 @@ added in `server/labs/gates.ts` as blueprints need them. Blocking gates fail the
 **Resume k/N** continues from that stage instead of starting over. Gates on the last stage are non-blocking: the lab
 is Ready with a readiness warning.
 
-**App content** — a blueprint can ship an app (`content` in `server/labs/blueprints.ts`, files in
-`blueprints/<id>/app/`). After the stack update and before the stage's gate, labctl asks Azure for the Static Web
+**App content** — a blueprint can ship content (kinds: a Static Web App, a Storage static website, blob uploads of synthetic sample data, a SQL seed script). Apps (`content` in a blueprint under `server/labs/catalog/`, files in
+`blueprints/<id>/`). After the stack update and before the stage's gate, labctl asks Azure for the Static Web
 App's deployment token (`listSecrets`) and publishes the folder with Microsoft's SWA CLI
 (`server/labs/content.ts`). The token goes to the CLI through an environment variable and is scrubbed from every
 error. The CLI is not an install-time dependency (it is ~290 MB with a native module): `npx` fetches a pinned

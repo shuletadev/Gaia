@@ -26,13 +26,9 @@ Command / Serial console).
 ## Cost and time
 IaaS about $0.02/hour all-in (VM, disk, IP); PaaS Free or about $0.02/hour on Basic. Deploy 4 to 8 min. Lifetime: one class.
 
-## Student activities
+## Class activities (instructor-led)
 Open both pages; list every resource the VM needs versus the App Service; stop and start the VM and watch the cost
 meter; find which tasks (patching, scaling) are theirs on each side; add a tag and filter Cost Analysis by it.
-
-## Student-mode policy pack
-VM sizes allowlist (B-series only), Standard SSD/HDD disks only, no GPU, no public IP on more than one NIC, tag required,
-region allowlist.
 
 ## Build notes and risks
 - **Built as designed**: the VM page comes from cloud-init; the App Service page comes from a tiny Node startup command fed through an app setting, so neither needs a deployment step. Verify both on the first real deploy (App Service startup-command quoting is the likeliest snag).
@@ -40,4 +36,4 @@ region allowlist.
 - Admin password comes from the existing `vm-password` hook; students never need it.
 - Page content on App Service needs either a zip-deploy content kind or a public container image (`mcr.microsoft.com/appsvc/staticsite`); verify when building.
 - VM size quota (B-series) can be 0 on new subscriptions; the preflight VM-size check already reports it.
-- Standard public IPs have a regional quota and an hourly charge: count them in the student cap.
+- Standard public IPs have a regional quota and an hourly charge:

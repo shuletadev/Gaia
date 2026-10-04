@@ -1,6 +1,6 @@
 # 06 · Tour operator: scale and uptime
 
-Blueprint `cr-tour-escala` · code `ctour` · **Status: Spec** · Batch 2
+Blueprint `cr-tour-escala` · code `ctour` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 2
 
 **Exam mapping:** AZ-900 (cloud concepts: high availability, scalability, elasticity, reliability, predictability; architecture: App Service, regions and availability).
 
@@ -25,15 +25,18 @@ App Service plan (Standard, which supports slots and autoscale), a web app with 
 ## Cost and time
 About $0.10/hour per Standard instance, so up to about $0.30/hour while scaled out. Deploy 4 to 7 min. Lifetime: **short** (2 to 4 hours).
 
-## Student activities
+## Class activities (instructor-led)
 Generate load with a provided script or a browser tab loop; watch the instance count; deploy a changed page to the
 slot and swap; break the health check and see the instance taken out of rotation.
 
-## Student-mode policy pack
-App Service plans Standard only, instance count capped at 3, one slot, no Premium tiers, no zone redundancy.
-
 ## Build notes and risks
 - Needs real page content: zip-deploy content kind or a public container image.
-- Load generation in class by 30 students multiplies cost: the cap matters most here.
+- The load button runs from whoever opens the page: the instructor demonstrates it once; a whole class pressing it would multiply the cost.
 - Autoscale takes minutes to react; plan the activity timing.
 - Slots and autoscale are not available on Free or Basic, so the preflight should explain a downgrade clearly.
+
+## As built
+- Standard S1 Linux ($0.095/h per instance). Autoscale: add an instance above 70% CPU for 5 minutes, remove one below 30% for 10, up to 2 or 3 instances.
+- A staging slot runs version 2 of the same page; production runs version 1. The page shows the version and the instance that answered, and has a button that simulates the busy season (8 parallel requests for 30 seconds against /work, which burns CPU).
+- Both pages come from one Node server delivered through an app setting; no deployment step. Verified locally: /health, /work, version and instance tokens, and the load button.
+- Application Insights (workspace-based) is wired in through app settings.

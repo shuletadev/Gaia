@@ -1,6 +1,6 @@
 # 13 · Branch network (later)
 
-Blueprint `cr-sucursales-red` · code `csucur` · **Status: Spec (outline only)** · Batch 3, after demand for AZ-104 is clear
+Blueprint `cr-sucursales-red` · code `csucur` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 3, after demand for AZ-104 is clear
 
 **Exam mapping:** AZ-104 (implement and manage virtual networking: VNets, peering, NSGs, load balancing, private DNS; deploy and manage compute: VMs; monitor and maintain).
 
@@ -23,3 +23,8 @@ Moderate: two VMs, load balancer and public IPs, about $0.10 to $0.15/hour. Depl
 - Resembles the hub-and-spoke lab that was removed from the catalog; the old Bicep is in git history (`a805272`) as a reference.
 - Quotas for public IPs and VM sizes will bite in a full class.
 - Postpone until the AZ-104 business case is decided; the fundamentals batches come first.
+
+## As built
+- Built (it was an outline). Hub plus two spokes (central web servers, Grecia branch) with peering in both directions, so spoke to spoke is not reachable: non-transitive peering is the lesson.
+- Standard load balancer over two nginx servers in an availability set (outbound rule so they can install nginx), a private DNS zone linked to all three networks with auto-registration on the web spoke, and an optional client VM with no public IP in the branch. About $0.077/h.
+- Access is through Run Command in the portal; no SSH and no Bastion.

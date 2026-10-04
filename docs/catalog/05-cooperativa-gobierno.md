@@ -1,6 +1,6 @@
 # 05 · Cooperativa: governance
 
-Blueprint `cr-cooperativa-gobierno` · code `ccoop` · **Status: Spec** · Batch 1
+Blueprint `cr-cooperativa-gobierno` · code `ccoop` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
 **Exam mapping:** AZ-900 (management and governance: Azure Policy, resource locks, tags, cost management and budgets, role-based access).
 
@@ -18,24 +18,25 @@ the accounting data and an alert before money runs out.
 ## Architecture
 Resource group with: policy assignments (allowed locations, require tag `centroCosto`, allowed storage SKUs), a storage
 account "libros-contables" with a delete lock, a budget at the group with an 80 percent alert, tagged sample resources,
-and an optional Reader role assignment for a supplied principal.
+and (see build notes) no role assignment: students do that step themselves in the portal.
 
 ## Knobs
-`locations` allowed list, `requireTag` on/off, `budgetUsd`, `readerPrincipalId` (optional).
+`allowedRegions` (five US regions or only the lab's), `requireTag`, `restrictStorage`, `enforce` (deny or report only), `budgetUsd`. The optional Reader principal was dropped: the launch form has no free-text field, and assigning a role is a student activity anyway.
 
 ## Cost and time
 Effectively free (policy, locks and budgets cost nothing; storage pennies). Deploy 2 to 3 min. Lifetime: one class.
 
-## Student activities
+## Class activities (instructor-led)
 Try to create a resource in a blocked region and read the denial; remove the tag requirement and see compliance
 change; try to delete the locked account; open the budget and the cost-by-tag view.
 
-## Student-mode policy pack
-This lab *is* a policy demonstration: students may create policy assignments only inside their own group. They may not
-change or remove the platform's own policies or locks.
-
 ## Build notes and risks
-- **A delete lock blocks deleting the lab's resource group.** Destroy must remove locks first (the delete planner already reports locks; the lab destroy path needs a step).
+- **Built as designed**: three department storage accounts (tagged centroCosto), a `CanNotDelete` lock on the accounting one, three built-in policy assignments (allowed regions, require tag, Standard_LRS only), and a monthly budget with 80% and 100% alerts. Knobs: regions, tag rule, storage rule, enforce vs report only, budget amount.
+- **Needs Owner**: policy assignments and locks need rights Contributor lacks. The preflight now says so before launch, and removing the lock on destroy needs the same.
+- **Lock removal on destroy is implemented** (`removeLocks` in the engine): only locks on the lab group or its resources, never inherited ones.
+- The `url` output is the resource group's portal link (there is no web page to check, so no readiness gate).
+- Not verified on a real deploy: budget creation depends on the subscription type (Cost Management access).
+- ~~A delete lock blocks deleting the lab group~~ handled by `removeLocks`.
 - Policy changes take several minutes to apply; the guide must say so.
 - Budget alert emails need a contact address (the lab owner).
-- Role assignments need a real principal ID, so keep it optional.
+- Students assign a role to a classmate in the portal; the guide should name the safe role (Reader) and scope (their own group).

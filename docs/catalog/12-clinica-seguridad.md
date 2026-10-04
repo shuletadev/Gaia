@@ -1,6 +1,6 @@
 # 12 · Clinic: protecting data
 
-Blueprint `cr-clinica-seguridad` · code `cclin` · **Status: Spec** · Batch 1
+Blueprint `cr-clinica-seguridad` · code `cclin` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
 **Exam mapping:** SC-900 (security solutions: network security groups, Defender for Cloud and secure score, key management, logging and monitoring; concepts: defense in depth, shared responsibility, Zero Trust) · AZ-900 (identity, access and security: RBAC, defense in depth).
 
@@ -27,16 +27,16 @@ receiving the vault's audit logs, and Defender for Cloud's **free** posture view
 ## Cost and time
 Low: Key Vault operations and log ingestion in pennies; no paid Defender plans. Deploy 3 to 6 min. Lifetime: one class.
 
-## Student activities
+## Class activities (instructor-led)
 Read the secret as the identity and as yourself; remove the role and see the access fail; read the audit log entry;
 open the secure score and fix one recommendation; compare the lockdown on and off.
-
-## Student-mode policy pack
-Key Vault standard only, no paid Defender plans, no firewalls or Sentinel (discussed, not deployed), role assignments
-only at their own group.
 
 ## Build notes and risks
 - **Soft delete**: a deleted Key Vault keeps its name; destroy must purge it, and purge protection must stay off in labs.
 - Never enable paid Defender plans by accident: policy must deny it for students.
 - Role assignments need the deployer to hold a role that can assign roles.
 - Sentinel and Azure Firewall are important SC-900 topics but costly; teach them as slides and screenshots.
+
+## As built
+- Key Vault (RBAC, purge protection off, 7-day soft delete) with a made-up connection string, audit logs to a Log Analytics workspace (1 GB/day cap), an NSG with HTTPS allowed and SSH/RDP denied, locked-down storage, and a user-assigned identity holding the Key Vault Secrets User role.
+- Needs Owner for the role assignment. Destroy purges the soft-deleted vault by its lab-name prefix. No paid Defender plans are enabled.

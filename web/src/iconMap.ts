@@ -60,6 +60,19 @@ export const ICON_SLUGS: Record<string, string> = {
   "microsoft.documentdb/databaseaccounts": "Azure-Cosmos-DB",
   "microsoft.sql/servers/databases": "SQL-Database",
   "microsoft.managedidentity/userassignedidentities": "Managed-Identities",
+  // Data, AI and governance (the training catalog's labs). Child resources share their parent's icon; the pack has no
+  // icon for locks or role assignments, so those keep the letter-tile fallback.
+  "microsoft.sql/servers": "SQL-Server",
+  "microsoft.synapse/workspaces": "Azure-Synapse-Analytics",
+  "microsoft.cognitiveservices/accounts": "Cognitive-Services",
+  "microsoft.cognitiveservices/accounts/deployments": "Cognitive-Services",
+  "microsoft.search/searchservices": "Cognitive-Search",
+  "microsoft.machinelearningservices/workspaces": "Machine-Learning",
+  "microsoft.machinelearningservices/workspaces/computes": "Machine-Learning",
+  "microsoft.authorization/policyassignments": "Policy",
+  "microsoft.consumption/budgets": "Cost-Budgets",
+  "microsoft.storage/storageaccounts/managementpolicies": "Storage-Accounts",
+  "microsoft.insights/diagnosticsettings": "Diagnostics-Settings",
   // Monitoring
   "microsoft.operationalinsights/workspaces": "Log-Analytics-Workspaces",
   "microsoft.insights/components": "Application-Insights",

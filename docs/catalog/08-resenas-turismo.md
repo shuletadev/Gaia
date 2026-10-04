@@ -1,6 +1,6 @@
 # 08 · Tourist reviews
 
-Blueprint `cr-resenas-turismo` · code `cresen` · **Status: Spec** · Batch 1
+Blueprint `cr-resenas-turismo` · code `cresen` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
 **Exam mapping:** AI-900 (natural language processing workloads: sentiment, key phrases, language detection, translation, entity recognition).
 
@@ -24,15 +24,16 @@ holding about 50 **synthetic** reviews in Spanish and English (some with Costa R
 ## Cost and time
 Pay per text record, idle about $0 (free tiers exist with monthly limits). Deploy 2 to 4 min. Lifetime: one class.
 
-## Student activities
+## Class activities (instructor-led)
 Analyze the whole set; chart sentiment by topic by hand from the key phrases; find three reviews the model got wrong
 and explain why; translate a review and judge the quality.
-
-## Student-mode policy pack
-Same as lab 07: AI services S0 or free only, one per student, no custom model training.
 
 ## Build notes and risks
 - Shares the AI-services Bicep module with lab 07; build them together.
 - Soft-deleted accounts must be purged on destroy.
 - Synthetic reviews must be written by us; avoid real names and real businesses.
 - Language availability and slang handling vary; test with the actual studio before class.
+
+## As built
+- Same AI services module as lab 07, with Language Studio as the CORS origin. 60 synthetic reviews (or 20) in Spanish and English, some with Costa Rican slang and some sarcastic, generated at deploy time.
+- Destroy purges the soft-deleted AI account.

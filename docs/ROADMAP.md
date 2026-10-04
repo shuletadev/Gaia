@@ -16,30 +16,37 @@ subscriptions.
 
 - **Two workspaces**: personal (monitor only) and business (labs, students, policies). The business workspace is
   administered by two people, each running Gaia on their own machine.
-- **Catalog mode 1, showcase labs**: admin-built, ready-to-deploy scenarios that show real Costa Rican use cases (pharmacy
-  receipts, pulpería inventory, small-business websites) to make Azure's possibilities visible in class.
-- **Catalog mode 2, student-built**: students build in the Azure portal following guides/PDFs. Admins decide what each
-  course may build and enforce it with policy, to keep cost and scope under control.
+- **The catalog is instructor reference material** (clarified 2026-10-04): ready-to-deploy scenarios that show real
+  Costa Rican use cases (pharmacy receipts, pulpería inventory, small-business websites), run by the instructor to
+  explain what the exams cover. Students do **not** build these.
+- **Student labs are Microsoft Learn's recommended labs.** Students do those themselves in the Azure portal. Gaia's job
+  there is the guardrails (what those labs need and nothing more), spend tracking, access and cleanup, not the lab content.
 - **Spend control**: track spend per student, with a cap per student, plus on-demand and automatic cleanup.
 - **Access control**: manage student access (RBAC/IAM) from Gaia, with a view that makes it easy to see who has what.
 - **Lifecycle (later)**: confirm a student is official (payment made, benefits granted), then automate Teams
   registration, learning resources and class invites.
 
-## Decisions so far (2026-10-03)
+## Decisions so far (2026-10-03, revised 2026-10-04)
+
+- **Catalog vs student labs (2026-10-04).** The 14 catalog labs are for the instructor to demonstrate. The labs students
+  build are Microsoft Learn's recommended ones, so student guardrails (policy packs) must come from what *those* labs
+  deploy, not from the catalog cards. The inventory of the Learn labs per course is written: see [learn-labs/](learn-labs/README.md). Findings: the labs need a real subscription, fixed resource-group names collide, some need more than Contributor, and SC-900 needs a Microsoft 365 lab tenant.
 
 - **Old catalog removed.** The 10 APIM / App Gateway / Front Door / firewall / DNS-resolver blueprints, their gates and
   hooks (APIM token, mTLS certificates), the APIM tier check and soft-delete purge were deleted. The generic engine
   stays: stacks, stages, gates (`http-ok`), hooks (`vm-password`), preflight, pricing, timing, capacity memory.
 - **Personal-support features removed:** Repro from case (and the `caseId` tag), Teams nudges, weekly report, Windows
   logon task. `npm run sweep` stays as a CLI.
-- **Admin-only first.** Students use only the Azure portal and guides; no student portal in v1.
+- **Admin-only first.** Students use only the Azure portal and Microsoft Learn's lab instructions; no student portal in v1.
 - **Hosting:** shared backend and always-on worker in Azure, in the business subscription.
 - **Tenants:** personal and business are in different Entra tenants, so workspaces need one tenant each (the config
   currently allows a single tenant per instance).
-- **Pilot course:** AZ-900. **Language:** English admin UI, Spanish student guides.
+- **Pilot course:** AZ-900. **Language:** English admin UI. Spanish class notes (to confirm: they supplement Microsoft Learn's English labs rather than replace them).
 - **No Azure Pass codes** for MCTs, so student usage is paid by the business.
 
-## Showcase catalog progress
+## Showcase catalog progress (instructor reference labs)
+
+**All 14 labs in the catalog are built** (specs in catalog/, one file per lab under server/labs/catalog/), with 295+ unit tests and all Bicep compiling. **None has been deployed to Azure yet.** Next: a sandbox test pass, then student-mode policy packs and Spanish guides.
 
 Spec cards for 15 labs (one per exam section at least) live in [docs/catalog/](catalog/README.md): review and prune
 there before anything else is built. Build order: batch 1 (one per section) 04, 03, 05, 02, 07, 08, 12; batch 2 10,
@@ -49,8 +56,9 @@ there before anything else is built. Build order: batch 1 (one per section) 04, 
   content step (SWA deployment token + pinned SWA CLI). The app keeps sales in the browser; saving them to the lab's
   Cosmos DB and Blob Storage (a Static Web Apps managed API) is the next step.
 - [x] `cr-taller-servidores` (IaaS vs PaaS, batch 1): Bicep, blueprint and tests done; same page on a VM and on App Service.
-- [ ] Pulpería inventory
-- [ ] Small-business website
+- [x] `cr-cooperativa-gobierno` (governance, batch 1): policies, delete lock, budget, tags; lab destroy now removes locks first.
+- [x] Pulpería inventory
+- [x] Small-business website (soda, lab 03)
 
 ## What the current code gives us
 
@@ -103,7 +111,12 @@ Recommended hybrid:
 Recommendation: A, designed so C stays open. (MCT status does not include Azure Pass codes, so the cost of student
 usage is on the business.)
 
-### 4. Student-built mode: policy packs per course
+### 4. Student labs (Microsoft Learn): policy packs per course
+
+*Revised 2026-10-04.* Students follow Microsoft Learn's recommended labs, so a course's pack is built from what those
+labs deploy (resource types, SKUs, regions), not from our catalog. Some Learn exercises run in Microsoft's free sandbox
+and need no subscription at all; others need the student's own Azure subscription. Which ones the course uses decides
+how much Gaia has to guard (see the open questions).
 
 A course defines allowed resource types, SKUs and regions, required tags and denies. Gaia compiles it into an Azure
 Policy initiative assigned to each student's resource group. Students get Contributor on their own group only
@@ -159,7 +172,8 @@ central, access-controlled store instead of laptops.
 2. **Shared business store**, roles for both admins, locks.
 3. **Student registry and lifecycle**, manual payment confirmation. Provision a resource group per student; tag
    everything by student and cohort.
-4. **Policy packs, RBAC/IAM view, budgets.** Core of student-built mode.
+4. **Policy packs, RBAC/IAM view, budgets** for the Microsoft Learn labs of each course (needs the inventory of what those
+   labs deploy first).
 5. **Spend ledger and caps** (five layers), plus the always-on worker.
 6. **Integrations**: Entra invites, Teams, calendar, resource delivery, payments.
 7. **Exam tracking, alumni, cohort and margin reports** (feeds pricing of the subscription).
