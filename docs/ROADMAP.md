@@ -48,6 +48,7 @@ there before anything else is built. Build order: batch 1 (one per section) 04, 
 - [x] `cr-farmacia-recibos` (pharmacy digital receipts): infrastructure plus a Spanish cashier app deployed by the new
   content step (SWA deployment token + pinned SWA CLI). The app keeps sales in the browser; saving them to the lab's
   Cosmos DB and Blob Storage (a Static Web Apps managed API) is the next step.
+- [x] `cr-taller-servidores` (IaaS vs PaaS, batch 1): Bicep, blueprint and tests done; same page on a VM and on App Service.
 - [ ] Pulpería inventory
 - [ ] Small-business website
 

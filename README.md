@@ -159,6 +159,7 @@ be created from an existing resource group with **Save as blueprint** (below). E
 | Blueprint | What you get | ≈ $/hr | Deploy |
 |---|---|---|---|
 | `cr-farmacia-recibos` | **Farmacia Pura Vida**: a pharmacy's digital receipts. Static Web App (Free) front end with a Spanish cashier app (catalog, cart, IVA, digital receipt, daily sales), Cosmos DB serverless sales database, Storage account for receipt files (LRS or GRS) | ~0 (usage-based) | 3–8 min |
+| `cr-taller-servidores` | **Taller Los Ángeles**: the same appointment page on a small Linux VM (nginx via cloud-init, only port 80 open, optional nightly shutdown) and on App Service (Free or Basic) | ~0.02 (Roomier ~0.08) | 4–9 min |
 
 **Launch** (Catalog) → pick a preset or region, parameters, lifetime and purpose; the hourly estimate comes from the
 public [Retail Prices API](https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices).

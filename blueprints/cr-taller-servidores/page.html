@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller Los Ángeles · Citas</title>
+<style>
+  body { margin:0; font:16px/1.5 system-ui, "Segoe UI", sans-serif; background:#f4f1ea; color:#1f2a2e; }
+  header { background:#b3402e; color:#fff; padding:16px 20px; }
+  header h1 { margin:0; font-size:22px; }
+  header p { margin:2px 0 0; opacity:.9; }
+  main { max-width:760px; margin:0 auto; padding:20px; display:grid; gap:16px; }
+  .card { background:#fff; border:1px solid #e3ded2; border-radius:14px; padding:16px; }
+  h2 { margin:0 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.7px; }
+  .badge { display:inline-block; background:#1f7a4d; color:#fff; border-radius:999px; padding:3px 12px; font-weight:600; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:7px 4px; border-bottom:1px solid #e3ded2; font-size:15px; }
+  th { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:#66767b; }
+  .who { font-weight:600; }
+  small { opacity:.75; }
+  @media (prefers-color-scheme: dark) { body { background:#12181a; color:#e6eced; } .card { background:#1a2326; border-color:#2a373b; } th { color:#9db1b6; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Taller Los Ángeles</h1>
+  <p>Alajuela, Costa Rica · Citas para su vehículo</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Horario</h2>
+    <p>Lunes a viernes, 7:30 a. m. a 5:30 p. m. · Sábados, 8:00 a. m. a 12:00 m. d.</p>
+    <p>Para una cita, llame al taller o escriba por mensaje con la placa de su vehículo.</p>
+  </section>
+  <section class="card">
+    <h2>Esta página corre en</h2>
+    <p><span class="badge">__HOST__</span></p>
+    <table>
+      <thead><tr><th>¿Quién se encarga de…?</th><th>Responsable</th></tr></thead>
+      <tbody>
+        <tr><td>Centro de datos y equipos físicos</td><td class="who">Azure</td></tr>
+        <tr><td>Red física y electricidad</td><td class="who">Azure</td></tr>
+        <tr><td>Sistema operativo y sus parches</td><td class="who">__OSWHO__</td></tr>
+        <tr><td>Servidor web / entorno de ejecución</td><td class="who">__RUNWHO__</td></tr>
+        <tr><td>Esta página y sus datos</td><td class="who">Usted</td></tr>
+      </tbody>
+    </table>
+    <p><small>Laboratorio de clase: compare esta página con la misma página en el otro tipo de servicio.</small></p>
+  </section>
+</main>
+</body>
+</html>

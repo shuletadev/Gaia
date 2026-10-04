@@ -28,7 +28,7 @@ Status of every card: **Spec** (not built) unless noted.
 | [01](01-farmacia-recibos.md) | Farmacia Pura Vida: digital receipts | `cr-farmacia-recibos` | AZ-900, DP-900 | ~$0 | **Built** |
 | [02](02-pulperia-inventario.md) | Pulpería Don Beto: inventory | `cr-pulperia-inventario` | DP-900, AZ-900 | low | 1 |
 | [03](03-soda-sitio-web.md) | Soda Doña Rosa: website and DNS | `cr-soda-sitio-web` | AZ-900 | ~$0 | 1 |
-| [04](04-taller-servidores.md) | Taller Los Ángeles: servers (IaaS vs PaaS) | `cr-taller-servidores` | AZ-900 | low | 1 |
+| [04](04-taller-servidores.md) | Taller Los Ángeles: servers (IaaS vs PaaS) | `cr-taller-servidores` | AZ-900 | low | 1 · **Built** |
 | [05](05-cooperativa-gobierno.md) | Cooperativa: governance | `cr-cooperativa-gobierno` | AZ-900 | free | 1 |
 | [06](06-tour-escala.md) | Tour operator: scale and uptime | `cr-tour-escala` | AZ-900 | moderate | 2 |
 | [07](07-facturas-escaner.md) | Invoice scanner | `cr-facturas-escaner` | AI-900 | pay-per-use | 1 |

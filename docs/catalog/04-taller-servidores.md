@@ -1,6 +1,6 @@
 # 04 · Taller Los Ángeles: servers (IaaS vs PaaS)
 
-Blueprint `cr-taller-servidores` · code `ctall` · **Status: Spec** · Batch 1
+Blueprint `cr-taller-servidores` · code `ctall` · **Status: Built** (Bicep, blueprint, tests; not yet deployed to Azure) · Batch 1
 
 **Exam mapping:** AZ-900 (cloud concepts: IaaS, PaaS, SaaS, shared responsibility, consumption model) · AZ-900 (management and governance: cost factors, tags, auto-shutdown).
 
@@ -35,6 +35,8 @@ VM sizes allowlist (B-series only), Standard SSD/HDD disks only, no GPU, no publ
 region allowlist.
 
 ## Build notes and risks
+- **Built as designed**: the VM page comes from cloud-init; the App Service page comes from a tiny Node startup command fed through an app setting, so neither needs a deployment step. Verify both on the first real deploy (App Service startup-command quoting is the likeliest snag).
+- Prices checked against the Retail Prices API: default $0.021/h, "Roomier" preset $0.076/h.
 - Admin password comes from the existing `vm-password` hook; students never need it.
 - Page content on App Service needs either a zip-deploy content kind or a public container image (`mcr.microsoft.com/appsvc/staticsite`); verify when building.
 - VM size quota (B-series) can be 0 on new subscriptions; the preflight VM-size check already reports it.
