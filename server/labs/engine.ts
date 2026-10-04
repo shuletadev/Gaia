@@ -18,11 +18,15 @@ import { labDataDir } from "./hooks.ts";
 import { CAPACITY_ERROR, recentCapacityEvent, recordCapacityEvent, tidyError } from "./capacity.ts";
 import { rmSync } from "node:fs";
 import { PARAM_HOOKS, type ParamHook } from "./hooks.ts";
-import { deployContent, type CommandRunner } from "./content.ts";
+import { deployContent, type CommandRunner, type SqlRunner } from "./content.ts";
 import type { HookKind } from "./blueprints.ts";
 
 const STACK_API = "2024-03-01";
 const RG_API = "2021-04-01";
+const LOCK_API = "2016-09-01";
+const ML_API = "2024-04-01";
+const COG_API = "2024-10-01";
+const KV_API = "2023-07-01";
 
 export interface LabRequest {
   blueprint: string;
@@ -311,8 +315,11 @@ export interface DeployOptions {
   gateOpts?: Parameters<typeof runGate>[2];
   /** Injected for tests; defaults to the real token/certificate hooks. */
   hooks?: Record<HookKind, ParamHook>;
-  /** Injected for tests; defaults to the SWA CLI. */
+  /** Injected for tests; defaults to the real SWA/Azure CLI. */
   contentRunner?: CommandRunner;
+  /** Injected for tests; defaults to the real SQL driver and real waits. */
+  contentSql?: SqlRunner;
+  contentSleep?: (ms: number) => Promise<void>;
 }
 
 /**
@@ -392,10 +399,10 @@ export async function deployLab(arm: ArmClient, db: Db, p: PreparedLab, estHourl
 
       // Apps go on after their host exists and before the gate, which then checks the real thing is serving.
       for (const [ci, c] of (p.blueprint.content ?? []).entries()) {
-        if (ranContent.has(ci) || (c.fromStage ?? 0) > (stage.value ?? Number.MAX_SAFE_INTEGER)) continue;
+        if (ranContent.has(ci) || (c.fromStage ?? 0) > (stage.value ?? Number.MAX_SAFE_INTEGER) || (c.when && !c.when(p.params))) continue;
         save(i, "deploying", { detail: `${stage.label} · publishing ${c.label}`, stageStartedAt });
         try {
-          await deployContent(c, { arm, subscriptionId: p.subscriptionId, labName: p.labName, blueprintId: p.blueprint.id, outputs }, opts.contentRunner);
+          await deployContent(c, { arm, subscriptionId: p.subscriptionId, labName: p.labName, blueprintId: p.blueprint.id, outputs, params: p.params, secrets: hookParams }, opts.contentRunner, { sql: opts.contentSql, sleep: opts.contentSleep });
         } catch (e) {
           throw new StageFailure((e as Error).message);
         }
@@ -527,9 +534,23 @@ export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: s
     }
     const rg = `${rgIdFor(sub, labName)}?api-version=${RG_API}`;
     if (await exists(arm, rg)) {
+      // A delete lock (a lab can create them on purpose) blocks deleting its group, so they come off first.
+      const unlocked = await removeLocks(arm, sub, labName);
+      if (unlocked.length) notes.push(`removed ${unlocked.length} lock${unlocked.length > 1 ? "s" : ""}`);
+      // Machine Learning workspaces are soft-deleted with their group; purging them first frees their names.
+      const workspaces = await purgeMlWorkspaces(arm, sub, labName).catch((e: Error) => {
+        notes.push(e.message);
+        return [] as string[];
+      });
+      if (workspaces.length) notes.push(`purged ${workspaces.join(", ")}`);
       await arm.lro("DELETE", rg, undefined, { timeoutMs: 2 * 60 * 60_000, pollMs: 15_000 });
       notes.push("group deleted");
     }
+    const purged = await purgeSoftDeleted(arm, sub, labName).catch((e: Error) => {
+      notes.push(e.message);
+      return [] as string[];
+    });
+    if (purged.length) notes.push(`purged ${purged.join(", ")}`);
     // A stack that was mid-delete refuses removal until that delete settles; with the group gone it
     // owns nothing, so try once more and leave no orphaned stack behind.
     if (await exists(arm, stackUrl(sub, labName)).catch(() => false)) {
@@ -552,6 +573,67 @@ export async function destroyLab(arm: ArmClient, db: Db, sub: string, labName: s
     updateLab(db, labName, { status: "failed", error: `Destroy: ${(e as Error).message}`.slice(0, 2000) });
     throw e;
   }
+}
+
+/**
+ * Removes the management locks that sit on the lab's resource group or on resources inside it. Locks
+ * inherited from the subscription or above are not the lab's and are left alone.
+ */
+export async function removeLocks(arm: Pick<ArmClient, "get" | "raw">, sub: string, labName: string): Promise<string[]> {
+  const scope = rgIdFor(sub, labName).toLowerCase();
+  const list = await arm.get<{ value: { id: string; name: string }[] }>(`${rgIdFor(sub, labName)}/providers/Microsoft.Authorization/locks?api-version=${LOCK_API}`);
+  const mine = list.value.filter((l) => l.id.toLowerCase().startsWith(`${scope}/`) || l.id.toLowerCase().startsWith(`${scope}/providers/`));
+  for (const l of mine) {
+    try {
+      await arm.raw("DELETE", `${l.id}?api-version=${LOCK_API}`);
+    } catch (e) {
+      if (e instanceof ArmError && e.status === 404) continue;
+      if (e instanceof ArmError && e.status === 403) throw new Error(`Cannot remove the lock "${l.name}" (needs Owner or User Access Administrator). Remove it in the portal, then destroy the lab again.`);
+      throw e;
+    }
+  }
+  return mine.map((l) => l.name);
+}
+
+/** Deletes the lab's Machine Learning workspaces with purge, since a plain delete only soft-deletes them and keeps the name. */
+export async function purgeMlWorkspaces(arm: Pick<ArmClient, "get" | "lro">, sub: string, labName: string): Promise<string[]> {
+  let list: { value: { id: string; name: string }[] };
+  try {
+    list = await arm.get(`${rgIdFor(sub, labName)}/providers/Microsoft.MachineLearningServices/workspaces?api-version=${ML_API}`);
+  } catch (e) {
+    // Provider not registered or group already gone: nothing to purge.
+    if (e instanceof ArmError && [400, 404, 409].includes(e.status)) return [];
+    throw e;
+  }
+  for (const w of list.value) await arm.lro("DELETE", `${w.id}?api-version=${ML_API}&forceToPurge=true`, undefined, { timeoutMs: 30 * 60_000, pollMs: 10_000 });
+  return list.value.map((w) => w.name);
+}
+
+/**
+ * Purges soft-deleted Key Vaults and AI services accounts that belonged to the lab, so their names can be reused.
+ * Only entries named after the lab are touched (every blueprint names such resources `<lab>-...`); the lists are
+ * subscription-wide, so anything else is left alone.
+ */
+export async function purgeSoftDeleted(arm: Pick<ArmClient, "get" | "lro">, sub: string, labName: string): Promise<string[]> {
+  const mine = (name: string) => name.toLowerCase().startsWith(`${labName.toLowerCase()}-`);
+  const purged: string[] = [];
+  const kinds = [
+    { label: "AI services", list: `/subscriptions/${sub}/providers/Microsoft.CognitiveServices/deletedAccounts?api-version=${COG_API}`, purge: (id: string) => arm.lro("DELETE", `${id}?api-version=${COG_API}`, undefined, { timeoutMs: 10 * 60_000, pollMs: 5000 }) },
+    { label: "Key Vault", list: `/subscriptions/${sub}/providers/Microsoft.KeyVault/deletedVaults?api-version=${KV_API}`, purge: (id: string) => arm.lro("POST", `${id}/purge?api-version=${KV_API}`, undefined, { timeoutMs: 10 * 60_000, pollMs: 5000 }) },
+  ];
+  for (const k of kinds) {
+    let items: { id: string; name: string }[] = [];
+    try {
+      items = (await arm.get<{ value: { id: string; name: string }[] }>(k.list)).value.filter((d) => mine(d.name));
+    } catch {
+      continue; // provider not registered, or no permission to list: nothing we can purge
+    }
+    for (const d of items) {
+      await k.purge(d.id);
+      purged.push(`${k.label} ${d.name}`);
+    }
+  }
+  return purged;
 }
 
 type StackState = { properties: { provisioningState: string; outputs?: Record<string, { value: unknown }>; error?: unknown } };

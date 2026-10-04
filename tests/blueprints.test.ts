@@ -131,3 +131,51 @@ describe("cr-farmacia-recibos", () => {
     expect(BLUEPRINTS.filter((x) => x.id === "cr-farmacia-recibos")).toHaveLength(1);
   });
 });
+
+describe("cr-cooperativa-gobierno", () => {
+  const b = getBlueprint("cr-cooperativa-gobierno");
+
+  it("costs nothing, has no web gate, and its url output is the portal link", () => {
+    expect(b.meters(b.schema.parse({})).every((m) => m.fixedHourly === 0)).toBe(true);
+    expect(stagesFor(b, b.schema.parse({}))[0]!.gate).toBeUndefined();
+  });
+
+  it("validates its knobs", () => {
+    expect(() => b.schema.parse({ budgetUsd: 1 })).toThrow();
+    expect(() => b.schema.parse({ allowedRegions: "world" })).toThrow();
+    expect(b.schema.parse({ enforce: "false" }).enforce).toBe(false);
+    for (const p of b.presets!) expect(b.schema.safeParse(p.params).success).toBe(true);
+    expect(b.armParams(b.schema.parse({}), { owner: "me@example.com" })).toMatchObject({ contactEmail: "me@example.com", budgetUsd: 20, enforce: true });
+  });
+
+  it("warns a Contributor-only deployer that policy assignments and locks need more rights", () => {
+    const types = labResourceTypes(b, b.schema.parse({}));
+    expect(types).toEqual(expect.arrayContaining(["Microsoft.Authorization/policyAssignments", "Microsoft.Authorization/locks", "Microsoft.Consumption/budgets"]));
+    const facts: AzureFacts = {
+      providers: {},
+      // The built-in Contributor role: everything except authorization writes and deletes.
+      permissions: [{ actions: ["*"], notActions: ["Microsoft.Authorization/*/Delete", "Microsoft.Authorization/*/Write"] }],
+      errors: {},
+    };
+    const rbac = evaluateFeasibility(
+      { region: "centralus", enabledRegions: ["centralus"], ttlHours: 4, hourly: 0, resourceTypes: types, regionFree: b.regionFree, rules: [], deployMinutes: [2, 5], budget: { monthlyUsd: 600 } },
+      facts,
+    ).find((c) => c.id === "rbac")!;
+    expect(rbac.status).toBe("fail");
+    expect(rbac.detail).toMatch(/policyAssignments\/write/);
+    expect(rbac.detail).toMatch(/locks\/write/);
+  });
+
+  it.skipIf(!hasBicep)("uses the built-in policies, locks only one account, and keeps storage Standard_LRS", async () => {
+    const json = JSON.stringify(await compileBlueprint(b.id));
+    // IDs of the built-in definitions "Allowed locations", "Require a tag on resources", "Storage accounts should be limited by allowed SKUs".
+    for (const id of ["e56962a6-4747-49cd-b67b-bf8b01975c4c", "871b6d14-10aa-478d-b590-94f262ecfa99", "7433c107-6db4-4ad1-b57a-a76dce0154a1"]) expect(json).toContain(id);
+    expect(json).toMatch(/"level":\s*"CanNotDelete"/);
+    expect((json.match(/Microsoft\.Authorization\/locks"/g) ?? []).length).toBe(1);
+    expect(json).toMatch(/"name":\s*"Standard_LRS"/);
+    expect(json).not.toMatch(/Standard_GRS|Premium_/);
+    // Enforcement is a switch, and every department's storage carries a cost-center tag.
+    expect(json).toContain("DoNotEnforce");
+    for (const dept of ["contabilidad", "creditos", "ahorros"]) expect(json).toContain(dept);
+  }, 60_000);
+});

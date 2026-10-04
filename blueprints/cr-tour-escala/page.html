@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aventuras Pacífico Norte · Reservas</title>
+<style>
+  body { margin:0; font:16px/1.5 system-ui, "Segoe UI", sans-serif; background:#eef6f7; color:#12303a; }
+  header { background:#0e7490; color:#fff; padding:18px 20px; }
+  header h1 { margin:0; font-size:24px; }
+  header p { margin:4px 0 0; opacity:.92; }
+  main { max-width:760px; margin:0 auto; padding:20px; display:grid; gap:16px; }
+  .card { background:#fff; border:1px solid #d3e6ea; border-radius:14px; padding:16px; }
+  h2 { margin:0 0 8px; font-size:15px; text-transform:uppercase; letter-spacing:.7px; color:#4a6b75; }
+  .pill { display:inline-block; border-radius:999px; padding:3px 12px; font-weight:600; background:#0e7490; color:#fff; }
+  .pill.v2 { background:#b45309; }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #e5eff1; }
+  button { font:inherit; font-weight:600; padding:10px 16px; border:0; border-radius:10px; background:#0e7490; color:#fff; cursor:pointer; }
+  button[disabled] { opacity:.5; cursor:not-allowed; }
+  button.ghost { background:transparent; color:#0e7490; border:1px solid #0e7490; }
+  small { color:#4a6b75; }
+  @media (prefers-color-scheme: dark) {
+    body { background:#0c1a1e; color:#e3f0f2; }
+    .card { background:#12262c; border-color:#1f3a42; }
+    h2, small { color:#8fb3bd; }
+    .row { border-color:#1f3a42; }
+    button.ghost { color:#5cc8df; border-color:#5cc8df; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aventuras Pacífico Norte</h1>
+  <p>Tours en Guanacaste · Reservas en línea</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Este sitio</h2>
+    <div class="row"><span>Versión</span><span id="ver" class="pill">__VERSION__</span></div>
+    <div class="row"><span>Instancia que respondió</span><b id="inst">__INSTANCE__</b></div>
+    <p><small>Recargue la página varias veces: si el sitio escaló, verá otra instancia respondiendo.</small></p>
+  </section>
+  <section class="card">
+    <h2>Simular la temporada alta</h2>
+    <p>Envía muchas solicitudes a la vez durante 30 segundos para subir el uso de CPU. Luego mire cuántas instancias tiene el plan en el portal.</p>
+    <p><button id="go">Simular temporada alta (30 s)</button> <button id="reload" class="ghost">Recargar</button></p>
+    <p id="status" aria-live="polite"><small>Listo.</small></p>
+  </section>
+</main>
+<script>
+  if ("__VERSION__" !== "1") document.getElementById("ver").classList.add("v2");
+  var go = document.getElementById("go"), statusEl = document.getElementById("status");
+  document.getElementById("reload").onclick = function () { location.reload(); };
+  go.onclick = function () {
+    var end = Date.now() + 30000, sent = 0, active = 0;
+    go.disabled = true;
+    function worker() {
+      if (Date.now() >= end) { if (--active === 0) { go.disabled = false; statusEl.textContent = "Terminó: " + sent + " solicitudes enviadas."; } return; }
+      fetch("/work?ms=700", { cache: "no-store" }).then(function () { sent++; statusEl.textContent = "Enviando… " + sent + " solicitudes."; }).catch(function () {}).then(worker);
+    }
+    for (var i = 0; i < 8; i++) { active++; worker(); }
+  };
+</script>
+</body>
+</html>

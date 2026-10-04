@@ -7,7 +7,7 @@ vi.mock("../server/labs/compile.ts", async (importOriginal) => ({
   compileBlueprint: async () => ({ $schema: "test" }),
 }));
 
-import { getBlueprint, type ContentDef } from "../server/labs/blueprints.ts";
+import { getBlueprint, type ContentDef, type StaticWebAppContent } from "../server/labs/blueprints.ts";
 import { contentDir, deployContent, scrub, SWA_CLI, type CommandRunner, type ContentCtx } from "../server/labs/content.ts";
 import { deployLab, prepareLab } from "../server/labs/engine.ts";
 import { getLab, openDb } from "../server/db.ts";
@@ -75,7 +75,7 @@ describe("deployContent", () => {
 
 describe("the pharmacy blueprint's app", () => {
   const b = getBlueprint("cr-farmacia-recibos");
-  const content = b.content![0]!;
+  const content = b.content![0] as StaticWebAppContent;
 
   it("declares content whose folder and output exist", () => {
     expect(content).toMatchObject({ kind: "static-web-app", dir: "app", siteOutput: "staticSiteName" });
