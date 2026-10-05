@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api.ts";
+import { useStore } from "../store.tsx";
 import { Btn, Chip, Label } from "../components/ui.tsx";
-import { ProvisionDialog } from "../components/ProvisionDialog.tsx";
+import { Modal } from "../components/Modal.tsx";
+import { ProvisionDialog, ReprovisionDialog } from "../components/ProvisionDialog.tsx";
 import { relTime } from "../format.ts";
-import type { Sandbox } from "../types.ts";
+import type { Job, Sandbox } from "../types.ts";
 
 const STATUS: Record<Sandbox["status"], { tone: "calm" | "plain" | "signal"; text: string }> = {
   active: { tone: "calm", text: "Active" },
@@ -11,11 +13,16 @@ const STATUS: Record<Sandbox["status"], { tone: "calm" | "plain" | "signal"; tex
   failed: { tone: "signal", text: "Failed" },
 };
 
-/** The list and the provision form. Re-provision and delete come in the next step (see docs/student-sandbox.md). */
+const COLUMNS = "sm:grid-cols-[minmax(0,1.3fr)_5rem_minmax(0,1fr)_6rem_7rem_7rem]";
+
+/** The student sandboxes: list, create, create again after the group is gone, and delete (see docs/student-sandbox.md). */
 export function Students() {
+  const { jobs, trackJobs, notify } = useStore();
   const [rows, setRows] = useState<Sandbox[]>();
   const [error, setError] = useState<string>();
   const [creating, setCreating] = useState(false);
+  const [again, setAgain] = useState<Sandbox>();
+  const [confirm, setConfirm] = useState<Sandbox>();
 
   const load = useCallback(() => {
     api<Sandbox[]>("/api/sandboxes")
@@ -26,11 +33,23 @@ export function Students() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
+  // Reload when a job starts or finishes, so a deleted sandbox turns to "Ended" without waiting for the next poll.
   useEffect(() => {
     load();
     const t = setInterval(load, 30_000);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load, jobs]);
+
+  const destroy = async (r: Sandbox) => {
+    setConfirm(undefined);
+    try {
+      trackJobs([await api<Job>(`/api/sandboxes/${encodeURIComponent(r.rg_name)}`, { method: "DELETE" })]);
+      notify(`Deleting ${r.rg_name}…`);
+      load();
+    } catch (e) {
+      notify((e as Error).message, "bad");
+    }
+  };
 
   if (error && !rows) return <p className="text-sm text-signal">{error}</p>;
   if (!rows) return <div className="h-64 animate-pulse rounded-3xl bg-stone-200 dark:bg-stone-900" />;
@@ -65,25 +84,30 @@ export function Students() {
               New sandbox
             </Btn>
           </div>
-          <div className="hidden grid-cols-[minmax(0,1.3fr)_5rem_minmax(0,1fr)_6rem_7rem] gap-3 px-1 pb-2 font-mono text-[10px] uppercase tracking-widest text-stone-500 sm:grid">
+          <div className={`hidden grid-cols-1 gap-3 px-1 pb-2 font-mono text-[10px] uppercase tracking-widest text-stone-500 sm:grid ${COLUMNS}`}>
             <span>Student</span>
             <span>Course</span>
             <span>Group</span>
             <span>Status</span>
             <span className="text-right">Ends</span>
+            <span />
           </div>
           <ul className="divide-y divide-stone-300/60 border-t border-stone-300/60 dark:divide-stone-800 dark:border-stone-800">
             {rows.map((r) => {
-              const s = STATUS[r.status];
+              const deleting = jobs.some((j) => j.status === "running" && j.target_name === r.rg_name);
+              const s = deleting ? { tone: "amber" as const, text: "Deleting" } : STATUS[r.status];
               const expired = r.status === "active" && new Date(r.expires_on).getTime() < Date.now();
               return (
-                <li key={r.rg_name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-1 py-3 text-sm sm:grid-cols-[minmax(0,1.3fr)_5rem_minmax(0,1fr)_6rem_7rem]">
+                <li key={r.rg_name} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-1 py-3 text-sm ${COLUMNS}`}>
                   <div className="min-w-0 sm:col-start-1 sm:row-start-1">
                     <div className="truncate font-medium">{r.student_name}</div>
                     <div className="truncate font-mono text-xs text-stone-500">{r.student_upn}</div>
                   </div>
                   <span className="justify-self-end sm:col-start-4 sm:row-start-1 sm:justify-self-start">
-                    <Chip tone={s.tone} title={r.error ?? undefined}>{s.text}</Chip>
+                    <Chip tone={s.tone} title={r.error ?? undefined}>
+                      {deleting && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
+                      {s.text}
+                    </Chip>
                   </span>
                   {/* On a phone these three share one line under the name; from sm up they are columns of the row. */}
                   <div className="col-span-2 flex min-w-0 items-center gap-3 sm:contents">
@@ -95,13 +119,39 @@ export function Students() {
                       {r.status === "active" ? (expired ? "expired" : relTime(r.expires_on)) : r.status === "ended" ? `ended ${relTime(r.ended_at ?? undefined)}` : "—"}
                     </span>
                   </div>
+                  <div className="col-span-2 flex justify-end sm:col-span-1 sm:col-start-6 sm:row-start-1">
+                    {deleting ? null : r.status === "active" ? (
+                      <Btn onClick={() => setConfirm(r)} aria-label={`Delete the sandbox of ${r.student_name}`}>
+                        Delete
+                      </Btn>
+                    ) : (
+                      <Btn tone="calm" onClick={() => setAgain(r)} aria-label={`Create the sandbox of ${r.student_name} again`}>
+                        Create again
+                      </Btn>
+                    )}
+                  </div>
                 </li>
               );
             })}
           </ul>
         </section>
       )}
+
       {creating && <ProvisionDialog onClose={() => setCreating(false)} onDone={load} />}
+      {again && <ReprovisionDialog sandbox={again} onClose={() => setAgain(undefined)} onDone={load} />}
+      {confirm && (
+        <Modal title="Delete sandbox" tone="danger" onClose={() => setConfirm(undefined)}>
+          <div className="text-2xl font-semibold">{confirm.student_name}</div>
+          <div className="mt-1 font-mono text-xs text-stone-500">{confirm.rg_name}</div>
+          <p className="mt-4 text-sm text-stone-500">Deletes the resource group and everything in it, including what the student built. You can create it again afterwards, empty.</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <Btn onClick={() => setConfirm(undefined)}>Cancel</Btn>
+            <Btn tone="danger" onClick={() => destroy(confirm)}>
+              Delete
+            </Btn>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

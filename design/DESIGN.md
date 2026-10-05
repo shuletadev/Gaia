@@ -45,6 +45,18 @@ A roster is a divided list, not cards: a header row of mono labels from `sm` up,
 status, then the secondary facts). Status is a `Chip` with text (calm = healthy, plain = finished, signal = failed); an overdue date is
 mono in signal. Names and emails truncate rather than wrap. Cards stay for a few long-lived things with their own actions (Labs).
 
+Row actions sit in the last column (a line of their own on a phone) and show one action per state: a quiet **Delete** on a live
+row, a `calm` **Create again** on an ended or failed one, nothing while a job runs (the status chip reads "Deleting"). Their
+accessible names include the person's name, because the visible text repeats on every row. Destructive confirmations use the
+`danger` modal with a plain Cancel and Delete; the typed-name confirmation stays for things that cannot be recreated (Inventory).
+
+Dialogs that start with a form focus their first field once open: the modal takes focus on open, which overrides `autoFocus`, so the
+form focuses the field itself. A result the admin must pass on (the student's message) gets its own view with a Copy button, and
+says so when the clipboard is blocked instead of failing silently.
+
+Known gap, from the Students pass and not new: buttons are about 28px tall (`Btn` is `py-1.5 text-xs`), under the usual 44px touch
+target. It affects the whole app, so it is a decision for a later pass rather than for one screen.
+
 ## Not decided yet (fill in during the first UI pass)
 
 - A type scale and spacing scale (sizes are set per component today).

@@ -1,9 +1,9 @@
 # Student sandbox (AZ-900 first)
 
 Status 2026-10-05: **server side built and unit-tested; never run against Azure.** The **Students** screen lists sandboxes and has a
-**New sandbox** form that ends on the message to send the student (in Spanish, with a Copy button). Re-provision and delete are not on
-the screen yet (the API has them). This document describes what it would change in the business subscription, so you can review it
-before anyone provisions a student.
+**New sandbox** form that ends on the message to send the student (in Spanish, with a Copy button). Each row has **Delete** (live
+sandboxes) or **Create again** (ended or failed ones). This document describes what it would change in the business subscription, so
+you can review it before anyone provisions a student.
 
 ## What it does
 
@@ -66,7 +66,7 @@ are assigned.
 
 ## Not built
 
-- **Re-provision and delete on the screen** (next UI step; the API has both), and a spend column (no spend data yet).
+- **A spend column** on the Students screen (the groups are tagged with the student, but Gaia does not read the spend yet).
 - **Per-student spend.** Groups carry the `student` tag, so Cost Management can already group by it; Gaia does not show it yet.
 - **Quota admission control** for shared quota (vCPUs, model tokens): needed before AZ-104 and AI-901 cohorts.
 - **AZ-104** needs a set of groups per student, constrained role assignments, a plan for the two tenant-level labs and quota checks
