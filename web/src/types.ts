@@ -142,3 +142,18 @@ export interface Sandbox {
   ended_at: string | null;
   error: string | null;
 }
+
+export interface SandboxCourse {
+  id: string;
+  title: string;
+  ttlDays: number;
+  budgetUsd: number;
+  allowedLocations: string[];
+}
+
+/** What provisioning returns: the record, the message for the student (Spanish) and notes for the admin. */
+export interface ProvisionResult {
+  record: Sandbox;
+  note: string;
+  warnings: string[];
+}

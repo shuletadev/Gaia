@@ -1,7 +1,9 @@
 # Student sandbox (AZ-900 first)
 
-Status 2026-10-05: **server side built and unit-tested; never run against Azure; no screen yet.** It is described here so you can
-review what it would change in the business subscription before anyone provisions a student.
+Status 2026-10-05: **server side built and unit-tested; never run against Azure.** The **Students** screen lists sandboxes and has a
+**New sandbox** form that ends on the message to send the student (in Spanish, with a Copy button). Re-provision and delete are not on
+the screen yet (the API has them). This document describes what it would change in the business subscription, so you can review it
+before anyone provisions a student.
 
 ## What it does
 
@@ -30,14 +32,15 @@ nobody or more than one person matches.
 
 ## What the student is told
 
-"Where the lab says `IntroAzureRG`, use `stu-maria-az900` (choose it from the list; you cannot create groups). Create resources only in
-these regions. If a lab ends with delete the resource group, you may; your instructor can create it again. Cloud Shell: continue without a
-storage account. Your sandbox ends on this date." Gaia returns this text when it provisions.
+In Spanish (the guides are Spanish): where the lab says `IntroAzureRG`, use the student's own group (choose it from the list, they cannot
+create groups); create resources only in the allowed regions; if a lab ends with "delete the resource group" they may, and the
+instructor can create it again; Cloud Shell: continue without a storage account; the sandbox ends on a date. Gaia returns this text
+when it provisions, and the New sandbox form shows it with a Copy button.
 
 ## How to try it (when you decide to)
 
-There is no screen yet. The calls, from the running app (`npm start`), need the per-launch token from `GET /api/session` in the
-`x-labctl-token` header:
+Use the **Students** screen (Students, then New sandbox), or the calls below. From the running app (`npm start`) they need the
+per-launch token from `GET /api/session` in the `x-labctl-token` header:
 
 - `GET /api/sandboxes/courses`: the course packs.
 - `POST /api/sandboxes` with `{ "student": "name@example.com", "course": "az-900", "days": 14 }`: creates one (a few seconds).
@@ -63,8 +66,7 @@ are assigned.
 
 ## Not built
 
-- **The screen.** A "Students" page: table of sandboxes (student, course, group, status, ends, spend), a provision form, re-provision and
-  delete. The project rules ask for an audit, then a plan you approve, before a larger UI pass, so I stopped at the server.
+- **Re-provision and delete on the screen** (next UI step; the API has both), and a spend column (no spend data yet).
 - **Per-student spend.** Groups carry the `student` tag, so Cost Management can already group by it; Gaia does not show it yet.
 - **Quota admission control** for shared quota (vCPUs, model tokens): needed before AZ-104 and AI-901 cohorts.
 - **AZ-104** needs a set of groups per student, constrained role assignments, a plan for the two tenant-level labs and quota checks

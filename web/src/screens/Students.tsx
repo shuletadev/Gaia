@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api.ts";
-import { Chip, Label } from "../components/ui.tsx";
+import { Btn, Chip, Label } from "../components/ui.tsx";
+import { ProvisionDialog } from "../components/ProvisionDialog.tsx";
 import { relTime } from "../format.ts";
 import type { Sandbox } from "../types.ts";
 
@@ -10,10 +11,11 @@ const STATUS: Record<Sandbox["status"], { tone: "calm" | "plain" | "signal"; tex
   failed: { tone: "signal", text: "Failed" },
 };
 
-/** Read-only for now: the provision form, re-provision and delete come in the next steps (see docs/student-sandbox.md). */
+/** The list and the provision form. Re-provision and delete come in the next step (see docs/student-sandbox.md). */
 export function Students() {
   const [rows, setRows] = useState<Sandbox[]>();
   const [error, setError] = useState<string>();
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {
     api<Sandbox[]>("/api/sandboxes")
@@ -47,16 +49,21 @@ export function Students() {
       {rows.length === 0 ? (
         <div className="grid place-items-center rounded-3xl border border-dashed border-stone-300 px-6 py-16 text-center dark:border-stone-800">
           <p className="text-stone-500">No student sandboxes yet.</p>
-          <p className="mt-2 max-w-md text-xs text-stone-500">The form to create one is the next step. Until then, a sandbox is created through the API described in the document above.</p>
+          <Btn tone="solid" className="mt-4" onClick={() => setCreating(true)}>
+            New sandbox
+          </Btn>
         </div>
       ) : (
         <section>
-          <div className="mb-3 flex items-baseline gap-3">
+          <div className="mb-3 flex items-center gap-3">
             <Label>Sandboxes</Label>
             <span className="font-mono text-[10px] text-stone-400">
               {rows.length} · {active} active
             </span>
             <span className="h-px flex-1 bg-stone-300/60 dark:bg-stone-800" />
+            <Btn tone="solid" onClick={() => setCreating(true)}>
+              New sandbox
+            </Btn>
           </div>
           <div className="hidden grid-cols-[minmax(0,1.3fr)_5rem_minmax(0,1fr)_6rem_7rem] gap-3 px-1 pb-2 font-mono text-[10px] uppercase tracking-widest text-stone-500 sm:grid">
             <span>Student</span>
@@ -94,6 +101,7 @@ export function Students() {
           </ul>
         </section>
       )}
+      {creating && <ProvisionDialog onClose={() => setCreating(false)} onDone={load} />}
     </div>
   );
 }

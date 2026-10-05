@@ -176,16 +176,16 @@ export function sandboxPlan(args: { sub: string; rgName: string; course: CourseP
   };
 }
 
-/** The message for the student: the group to use where the lab names its own, and what the sandbox allows. */
+/** The message for the student, in Spanish (the guides are Spanish): the group to use where the lab names its own, and what the sandbox allows. */
 export function substitutionNote(rgName: string, course: CoursePack, expiresOn: string): string {
-  const lab = course.labGroupNames.length ? course.labGroupNames.map((n) => `\`${n}\``).join(" and ") : "the resource group";
+  const lab = course.labGroupNames.length ? course.labGroupNames.map((n) => `\`${n}\``).join(" y ") : "el grupo de recursos";
   return [
-    `Your sandbox for ${course.title} is the resource group \`${rgName}\`. It already exists: you cannot create new groups.`,
-    `Where a lab tells you to create or use ${lab}, use \`${rgName}\` instead (choose it from the list; do not try to create it).`,
-    `Create resources only in: ${course.allowedLocations.join(", ")}. A few costly services are blocked on purpose.`,
-    `If a lab ends with "delete the resource group", you may. That ends your sandbox, and your instructor can create it again.`,
-    `Cloud Shell: when it asks for storage, choose to continue without a storage account.`,
-    `Your sandbox is deleted automatically on ${expiresOn.slice(0, 10)}, with everything in it.`,
+    `Su sandbox para ${course.title} es el grupo de recursos \`${rgName}\`. Ya existe: no puede crear grupos nuevos.`,
+    `Donde el laboratorio diga que cree o use ${lab}, use \`${rgName}\` en su lugar (elíjalo de la lista; no intente crearlo).`,
+    `Cree recursos solo en estas regiones: ${course.allowedLocations.join(", ")}. Algunos servicios costosos están bloqueados a propósito.`,
+    `Si un laboratorio termina con "eliminar el grupo de recursos", puede hacerlo. Eso termina su sandbox, y su instructor puede crearlo de nuevo.`,
+    `Cloud Shell: cuando pida almacenamiento, elija continuar sin una cuenta de almacenamiento.`,
+    `Su sandbox se elimina automáticamente el ${expiresOn.slice(0, 10)}, con todo lo que contiene.`,
   ].join("\n");
 }
 
