@@ -1,7 +1,8 @@
 # Gaia
 
 Local control room for an Azure sandbox (cost and orphan audits, park/resume, dependency-aware delete, labs).
-`START-HERE.md` explains how it runs; `docs/ROADMAP.md` what is planned. Server in `server/`, web app in `web/src`
+`START-HERE.md` explains how it runs; `docs/ROADMAP.md` what is planned; `docs/HANDOFF.md` where the work stands and what to do next
+(read it first in a new session). Server in `server/`, web app in `web/src`
 (React 19, Vite, Tailwind 4). Run with `npm run dev`; check with `npm run typecheck` and `npm test`.
 
 ## UI work

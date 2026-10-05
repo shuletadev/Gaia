@@ -1,0 +1,7 @@
+- [Catalog is instructor reference](catalog-is-instructor-reference.md) — the lab blueprints are instructor demos; students build Microsoft Learn's labs
+- [Catalog scope: AZ-900, AI-901, AZ-104](catalog-scope-az900-ai901-az104.md) — AI-900 retired 30 Jun 2026; catalog now 22 labs, built for these three exams only
+- [Gaia roadmap decisions](gaia-roadmap-decisions.md) — tenants, hosting, language, exam scope, nav and working rules for the training-business plan
+- [Microsoft Learn labs inventory](microsoft-learn-labs-inventory.md) — what the official AZ-900/AZ-104/AI-901/DP-900/SC-900 labs deploy and the guardrail implications
+- [Student sandbox status](student-sandbox-status.md) — AZ-900 sandbox built, on the Students screen, never run on Azure; first real test and open decisions
+- [Marco's working style](user-marco-working-style.md) — plain reports, audit before deploying, commit and push only when asked
+- [Windows tooling quirks](windows-tooling-quirks.md) — edit with tools not shell escaping, mixed line endings, detaching the server, testing the UI without Azure
