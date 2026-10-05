@@ -30,6 +30,21 @@ Theme is chosen by the app, not the OS: `html.dark` (see `web/src/theme.ts`), da
 - Screens: `web/src/screens/` (Overview, Inventory, Hunt, Labs, Catalog, Log, Settings, Setup).
 - Shared pieces: `web/src/components/ui.tsx`, `Modal.tsx`, `charts.tsx`, `Icons.tsx`, `ResourceIcon.tsx`.
 
+## Navigation (decided 2026-10-05)
+
+Five sections in the nav: **Overview, Labs, Students, Resources, Settings**. A section with several pages shows them as tabs under
+its title, in the same pill style as the launch dialog's presets (`rounded-full`, signal border when open):
+Labs = Running · Catalog; Resources = Inventory · Orphan hunt · Log. Every page keeps its own hash (`#catalog`, `#hunt`, `#log`...),
+so links and `go()` calls did not change, and clicking a section returns to the page last open in it. The orphan-finding count shows on
+the Resources nav item and on the Orphan hunt tab. Reason: eight entries overflowed the phone-width nav. On a phone only the open
+section shows its name; the others are icons with accessible labels. New sections should join an existing one before they get an entry.
+
+## Lists (decided 2026-10-05, from the Students screen)
+
+A roster is a divided list, not cards: a header row of mono labels from `sm` up, five columns, and on a phone two lines (name and
+status, then the secondary facts). Status is a `Chip` with text (calm = healthy, plain = finished, signal = failed); an overdue date is
+mono in signal. Names and emails truncate rather than wrap. Cards stay for a few long-lived things with their own actions (Labs).
+
 ## Not decided yet (fill in during the first UI pass)
 
 - A type scale and spacing scale (sizes are set per component today).

@@ -88,3 +88,6 @@ export const IconExport = (p: SVGProps<SVGSVGElement>) => (
 export const IconCase = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" /></svg>
 );
+export const IconUsers = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><circle cx="17" cy="9" r="2.4" /><path d="M16.5 14.6c2.7.1 4.5 1.9 4.5 4.4" /></svg>
+);

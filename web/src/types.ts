@@ -125,3 +125,20 @@ export interface GroupSuggestions {
   suggested: { name: string; reason: string }[];
 }
 
+
+/** A student sandbox as the server stores it (see server/sandbox/store.ts). */
+export interface Sandbox {
+  rg_name: string;
+  subscription_id: string;
+  student_upn: string;
+  student_name: string;
+  object_id: string;
+  course: string;
+  location: string;
+  budget_usd: number;
+  created_at: string;
+  expires_on: string;
+  status: "active" | "ended" | "failed";
+  ended_at: string | null;
+  error: string | null;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { StoreProvider, useStore } from "./store.tsx";
 import { ActionsProvider } from "./components/actions.tsx";
-import { IconCrosshair, IconFlask, IconGauge, IconGear, IconGrid, IconList, IconMoon, IconRefresh, IconStack, IconSun } from "./components/Icons.tsx";
+import { IconFlask, IconGauge, IconGear, IconMoon, IconRefresh, IconStack, IconSun, IconUsers } from "./components/Icons.tsx";
 import { useTheme } from "./theme.ts";
 import { Overview } from "./screens/Overview.tsx";
 import { Inventory } from "./screens/Inventory.tsx";
@@ -9,24 +9,44 @@ import { Hunt } from "./screens/Hunt.tsx";
 import { Log } from "./screens/Log.tsx";
 import { Catalog } from "./screens/Catalog.tsx";
 import { Labs } from "./screens/Labs.tsx";
+import { Students } from "./screens/Students.tsx";
 import { Settings } from "./screens/Settings.tsx";
 import { Setup } from "./screens/Setup.tsx";
 import { relTime } from "./format.ts";
 
-type Screen = "overview" | "labs" | "catalog" | "inventory" | "hunt" | "log" | "settings";
+/** Every page keeps its own id and hash (#catalog, #hunt...), so links and go() calls are unchanged. */
+type Screen = "overview" | "labs" | "catalog" | "students" | "inventory" | "hunt" | "log" | "settings";
 
-const NAV: { id: Screen; label: string; Icon: typeof IconGauge }[] = [
-  { id: "overview", label: "Overview", Icon: IconGauge },
-  { id: "labs", label: "Labs", Icon: IconFlask },
-  { id: "catalog", label: "Catalog", Icon: IconGrid },
-  { id: "inventory", label: "Inventory", Icon: IconStack },
-  { id: "hunt", label: "Hunt", Icon: IconCrosshair },
-  { id: "log", label: "Log", Icon: IconList },
-  { id: "settings", label: "Settings", Icon: IconGear },
+/** The nav shows five sections; sections with several pages show them as tabs under the title. */
+const SECTIONS: { id: string; label: string; Icon: typeof IconGauge; pages: { id: Screen; label: string }[] }[] = [
+  { id: "overview", label: "Overview", Icon: IconGauge, pages: [{ id: "overview", label: "Overview" }] },
+  {
+    id: "labs",
+    label: "Labs",
+    Icon: IconFlask,
+    pages: [
+      { id: "labs", label: "Running" },
+      { id: "catalog", label: "Catalog" },
+    ],
+  },
+  { id: "students", label: "Students", Icon: IconUsers, pages: [{ id: "students", label: "Sandboxes" }] },
+  {
+    id: "resources",
+    label: "Resources",
+    Icon: IconStack,
+    pages: [
+      { id: "inventory", label: "Inventory" },
+      { id: "hunt", label: "Orphan hunt" },
+      { id: "log", label: "Log" },
+    ],
+  },
+  { id: "settings", label: "Settings", Icon: IconGear, pages: [{ id: "settings", label: "Settings" }] },
 ];
 
+const PAGES = SECTIONS.flatMap((s) => s.pages.map((p) => p.id));
+
 function useHashScreen(): [Screen, (s: Screen) => void] {
-  const read = () => (NAV.some((n) => `#${n.id}` === location.hash) ? (location.hash.slice(1) as Screen) : "overview");
+  const read = () => (PAGES.some((id) => `#${id}` === location.hash) ? (location.hash.slice(1) as Screen) : "overview");
   const [screen, setScreen] = useState<Screen>(read);
   useEffect(() => {
     const on = () => setScreen(read());
@@ -40,6 +60,10 @@ function Shell() {
   const { status, snapshot, loading, error, reload, jobs, notice, subscriptionId, setSubscriptionId } = useStore();
   const [screen, go] = useHashScreen();
   const [theme, toggleTheme] = useTheme();
+  // Clicking a section returns to the page you last had open in it.
+  const [lastPage, setLastPage] = useState<Record<string, Screen>>({});
+  const section = SECTIONS.find((s) => s.pages.some((p) => p.id === screen)) ?? SECTIONS[0]!;
+  useEffect(() => setLastPage((m) => (m[section.id] === screen ? m : { ...m, [section.id]: screen })), [screen, section.id]);
   const running = jobs.filter((j) => j.status === "running");
   const findings = snapshot?.findings.filter((f) => f.severity !== "info").length ?? 0;
 
@@ -60,19 +84,24 @@ function Shell() {
           <img src="/gaia.svg" alt="" className="size-8 rounded-[9px] lg:size-10 lg:rounded-xl" />
           <span className="font-mono text-[10px] tracking-[0.35em] text-signal lg:[writing-mode:vertical-rl] lg:rotate-180">GAIA</span>
         </div>
-        {NAV.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => go(id)}
-            className={`group relative flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition lg:flex-col lg:gap-1 lg:px-2 ${screen === id ? "text-stone-900 dark:text-white" : "text-stone-500 hover:text-stone-900 dark:hover:text-white"}`}
-            aria-current={screen === id ? "page" : undefined}
-          >
-            <span className={`absolute left-0 hidden h-6 w-0.5 rounded-full bg-signal transition lg:block ${screen === id ? "opacity-100" : "opacity-0"}`} />
-            <Icon />
-            <span className="lg:font-mono lg:text-[9px] lg:uppercase lg:tracking-widest">{label}</span>
-            {id === "hunt" && findings > 0 && <span className="absolute top-1 right-1 rounded-full bg-signal px-1 text-[9px] font-bold text-black">{findings}</span>}
-          </button>
-        ))}
+        {SECTIONS.map(({ id, label, Icon, pages }) => {
+          const here = section.id === id;
+          return (
+            <button
+              key={id}
+              onClick={() => go(lastPage[id] ?? pages[0]!.id)}
+              className={`group relative flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition lg:flex-col lg:gap-1 lg:px-2 ${here ? "text-stone-900 dark:text-white" : "text-stone-500 hover:text-stone-900 dark:hover:text-white"}`}
+              aria-current={here ? "page" : undefined}
+              aria-label={label}
+            >
+              <span className={`absolute left-0 hidden h-6 w-0.5 rounded-full bg-signal transition lg:block ${here ? "opacity-100" : "opacity-0"}`} />
+              <Icon />
+              {/* On a phone only the open section shows its name, so five entries fit. */}
+              <span className={`${here ? "" : "max-sm:hidden"} lg:block lg:font-mono lg:text-[9px] lg:uppercase lg:tracking-widest`}>{label}</span>
+              {id === "resources" && findings > 0 && <span className="absolute top-1 right-1 rounded-full bg-signal px-1 text-[9px] font-bold text-black">{findings}</span>}
+            </button>
+          );
+        })}
         <button
           onClick={toggleTheme}
           className="ml-auto rounded-xl p-2 text-stone-500 transition hover:text-stone-900 lg:mt-auto lg:ml-0 dark:hover:text-white"
@@ -84,9 +113,9 @@ function Shell() {
       </nav>
 
       <div className="mx-auto w-full max-w-6xl px-6 py-8 lg:px-12">
-        <header className="mb-10 flex flex-wrap items-center gap-4">
+        <header className={`flex flex-wrap items-center gap-4 ${section.pages.length > 1 ? "mb-6" : "mb-10"}`}>
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight capitalize">{screen === "hunt" ? "Orphan hunt" : screen === "catalog" ? "Lab catalog" : screen}</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">{section.label}</h1>
             <div className="mt-1 flex items-center gap-2 text-xs text-stone-500">
               <span className={`size-1.5 rounded-full ${status?.identity.ok ? "bg-calm" : "bg-signal"}`} title={status?.identity.error} />
               {status.subscriptions.length > 1 ? (
@@ -119,6 +148,22 @@ function Shell() {
           </button>
         </header>
 
+        {section.pages.length > 1 && (
+          <nav aria-label={`${section.label} pages`} className="mb-8 flex flex-wrap gap-1.5">
+            {section.pages.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => go(p.id)}
+                aria-current={screen === p.id ? "page" : undefined}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition ${screen === p.id ? "border-signal bg-signal/10 text-stone-900 dark:text-white" : "border-stone-300 text-stone-500 hover:border-stone-400 dark:border-stone-700"}`}
+              >
+                {p.label}
+                {p.id === "hunt" && findings > 0 && <span className="rounded-full bg-signal px-1 text-[9px] font-bold text-black">{findings}</span>}
+              </button>
+            ))}
+          </nav>
+        )}
+
         {error && <p className="mb-6 rounded-xl bg-signal/15 px-4 py-3 text-sm text-signal">{error}</p>}
 
         {screen === "overview" && <Overview go={go} />}
@@ -126,6 +171,7 @@ function Shell() {
         {screen === "hunt" && <Hunt />}
         {screen === "log" && <Log />}
         {screen === "labs" && <Labs go={go} />}
+        {screen === "students" && <Students />}
         {screen === "catalog" && <Catalog onLaunched={() => go("labs")} />}
         {screen === "settings" && <Settings />}
       </div>
